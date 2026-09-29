@@ -90,7 +90,9 @@ Chaque personne concernee recoit **un seul** email contenant **l'integralite** d
 presente **par groupe** : les jours consecutifs d'une meme personne sont regroupes sur une seule ligne
 (par exemple `Lundi a Dimanche : Jean Dupont`). Une ligne supplementaire n'apparait que s'il y a une
 exception (par exemple `Lundi a Vendredi : Didier` puis `Samedi a Dimanche : Volker`). Chaque ligne
-indique aussi le telephone et l'email de la personne.
+indique aussi le telephone et l'email de la personne. Le titre de chaque bloc est le nom du groupe,
+suivi de sa description entre parentheses lorsqu'une description est renseignee
+(par exemple `On-duty UC-LE (Astreinte equipement)`).
 
 ## Historique
 

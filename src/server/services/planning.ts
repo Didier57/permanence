@@ -6,6 +6,7 @@ export type PlanningEntry = {
   date: string;
   groupId: string;
   groupName: string;
+  groupDescription: string | null;
   groupColor: string | null;
   userId: string;
   userName: string;
@@ -50,6 +51,7 @@ export async function getWeekSnapshot(weekYear: number, weekNumber: number): Pro
     date: dateKey(permanence.date),
     groupId: permanence.groupId,
     groupName: permanence.group.name,
+    groupDescription: permanence.group.description,
     groupColor: permanence.group.color,
     userId: permanence.userId,
     userName: `${permanence.user.firstName} ${permanence.user.lastName}`,

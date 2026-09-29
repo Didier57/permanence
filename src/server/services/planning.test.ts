@@ -4,6 +4,7 @@ import { canonicalize, snapshotHash, type PlanningEntry, type WeekSnapshot } fro
 function entry(overrides: Partial<PlanningEntry> & Pick<PlanningEntry, "date" | "groupId" | "userId">): PlanningEntry {
   return {
     groupName: "Groupe",
+    groupDescription: null,
     groupColor: null,
     userName: "Utilisateur",
     userEmail: "user@example.com",

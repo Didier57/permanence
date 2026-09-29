@@ -5,6 +5,7 @@ import type { PlanningEntry, WeekSnapshot } from "./planning";
 function entry(overrides: Partial<PlanningEntry> & Pick<PlanningEntry, "date" | "groupId" | "userId">): PlanningEntry {
   return {
     groupName: "Groupe",
+    groupDescription: null,
     groupColor: null,
     userName: "Utilisateur",
     userEmail: "user@example.com",
@@ -67,10 +68,34 @@ describe("buildWeekEmail", () => {
 
   it("contient l'integralite du planning (tous les groupes)", () => {
     expect(email.text).toContain("Semaine 42 du 12/10/2026 au 18/10/2026");
-    expect(email.text).toContain("Groupe : Informatique");
-    expect(email.text).toContain("Groupe : Securite");
+    expect(email.text).toContain("Informatique");
+    expect(email.text).toContain("Securite");
+    expect(email.text).not.toContain("Groupe :");
     expect(email.text).toContain("Lundi : Jean Dupont");
     expect(email.text).toContain("Mardi : Pierre Martin");
+  });
+
+  it("affiche le nom du groupe suivi de sa description entre parentheses", () => {
+    const withDescription = buildWeekEmail({
+      weekYear: 2026,
+      weekNumber: 42,
+      weekStart: "2026-10-12",
+      weekEnd: "2026-10-18",
+      entries: [
+        entry({
+          date: "2026-10-12",
+          groupId: "g-uc",
+          groupName: "On-duty UC-LE",
+          groupDescription: "Astreinte equipement",
+          userId: "u-didier",
+          userName: "Didier",
+          userEmail: "didier@example.com",
+        }),
+      ],
+    });
+    expect(withDescription.text).toContain("On-duty UC-LE (Astreinte equipement)");
+    expect(withDescription.text).not.toContain("Groupe :");
+    expect(withDescription.html).toContain("On-duty UC-LE (Astreinte equipement)");
   });
 
   it("regroupe les jours consecutifs d'un meme utilisateur et ajoute des lignes pour les exceptions", () => {

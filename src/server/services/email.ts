@@ -94,6 +94,7 @@ export function buildWeekEmail(
       const byDate = new Map(entries.map((entry) => [entry.date, entry]));
       return {
         groupName: entries[0]?.groupName ?? "",
+        groupDescription: entries[0]?.groupDescription ?? null,
         ranges: compressDays(dayKeys.map((key) => byDate.get(key))),
       };
     })
@@ -107,8 +108,11 @@ export function buildWeekEmail(
   html += `<p><strong>Semaine ${snapshot.weekNumber}</strong> du ${formatDateFr(start)} au ${formatDateFr(end)}</p>`;
 
   for (const group of groups) {
-    text += `Groupe : ${group.groupName}\n`;
-    html += `<h2 style="font-size:15px;margin-bottom:4px;">Groupe : ${escapeHtml(group.groupName)}</h2>`;
+    const groupTitle = group.groupDescription
+      ? `${group.groupName} (${group.groupDescription})`
+      : group.groupName;
+    text += `${groupTitle}\n`;
+    html += `<h2 style="font-size:15px;margin-bottom:4px;">${escapeHtml(groupTitle)}</h2>`;
     html += `<table style="border-collapse:collapse;margin-bottom:12px;width:100%;">`;
     for (const range of group.ranges) {
       const label = rangeLabel(days, range.start, range.end);
