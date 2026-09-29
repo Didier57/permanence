@@ -2,13 +2,14 @@
 
 import { useActionState, useState } from "react";
 import { Alert, Button, Card, Field, Input, Select } from "@/components/ui";
+import { ROLE_LABELS, type AccountRole } from "@/lib/roles";
 import { deleteAccount, saveAccount, type AccountActionState } from "@/server/account-actions";
 
 export type AccountView = {
   id: string;
   email: string;
   displayName: string | null;
-  role: "ADMIN" | "USER";
+  role: AccountRole;
   active: boolean;
   userId: string | null;
   userName: string | null;
@@ -17,6 +18,12 @@ export type AccountView = {
 export type PersonOption = { id: string; label: string };
 
 const INITIAL: AccountActionState = {};
+
+const ROLE_BADGE: Record<AccountRole, string> = {
+  ADMIN: "rounded-full bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700",
+  MANAGER: "rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700",
+  USER: "rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600",
+};
 
 function AccountForm({
   account,
@@ -41,7 +48,8 @@ function AccountForm({
         </Field>
         <Field label="Role" htmlFor="role">
           <Select id="role" name="role" defaultValue={account?.role ?? "USER"}>
-            <option value="USER">Utilisateur simple</option>
+            <option value="USER">Utilisateur simple (lecture seule)</option>
+            <option value="MANAGER">Gestionnaire</option>
             <option value="ADMIN">Administrateur</option>
           </Select>
         </Field>
@@ -134,14 +142,8 @@ export function AccountManager({
                 <td className="px-4 py-3 font-medium text-slate-800">{account.email}</td>
                 <td className="px-4 py-3 text-slate-600">{account.displayName ?? "-"}</td>
                 <td className="px-4 py-3">
-                  <span
-                    className={
-                      account.role === "ADMIN"
-                        ? "rounded-full bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700"
-                        : "rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600"
-                    }
-                  >
-                    {account.role === "ADMIN" ? "Administrateur" : "Utilisateur"}
+                  <span className={ROLE_BADGE[account.role]}>
+                    {ROLE_LABELS[account.role]}
                   </span>
                 </td>
                 <td className="px-4 py-3 text-slate-600">{account.userName ?? "-"}</td>

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { requireAdmin } from "@/lib/auth";
+import { requireManager } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
 
@@ -21,7 +21,7 @@ const groupSchema = z.object({
 
 export async function saveGroup(_prev: ActionState, formData: FormData): Promise<ActionState> {
   try {
-    await requireAdmin();
+    await requireManager();
   } catch {
     return { error: "Acces refuse." };
   }
@@ -79,7 +79,7 @@ export async function saveGroup(_prev: ActionState, formData: FormData): Promise
 }
 
 export async function deleteGroup(formData: FormData): Promise<void> {
-  await requireAdmin();
+  await requireManager();
   const id = formData.get("id")?.toString();
   if (!id) return;
   const permanenceCount = await prisma.permanence.count({ where: { groupId: id } });

@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/page-header";
 import { Card } from "@/components/ui";
 import { getCurrentAccount } from "@/lib/auth";
+import { ROLE_LABELS } from "@/lib/roles";
 import { PasswordForm } from "./password-form";
 
 export const metadata: Metadata = { title: "Mon compte - Permanence" };
@@ -31,7 +32,7 @@ export default async function MonComptePage() {
           <div>
             <dt className="text-slate-500">Droits</dt>
             <dd className="font-medium text-slate-900">
-              {account.role === "ADMIN" ? "Administrateur" : "Utilisateur"}
+              {ROLE_LABELS[account.role]}
             </dd>
           </div>
         </dl>

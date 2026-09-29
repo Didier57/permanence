@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/page-header";
 import { Card } from "@/components/ui";
-import { getCurrentAccount } from "@/lib/auth";
+import { getCurrentAccount, isManagerRole } from "@/lib/auth";
 import { formatDateFr } from "@/lib/date";
 import { prisma } from "@/lib/db";
 
@@ -27,7 +27,7 @@ function formatDateTime(date: Date): string {
 
 export default async function HistoryPage() {
   const account = await getCurrentAccount();
-  if (!account || account.role !== "ADMIN") {
+  if (!account || !isManagerRole(account.role)) {
     redirect("/planning");
   }
 

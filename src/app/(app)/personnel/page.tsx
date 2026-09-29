@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/page-header";
-import { getCurrentAccount } from "@/lib/auth";
+import { getCurrentAccount, isManagerRole } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { PersonnelManager, type GroupOption, type UserView } from "./personnel-manager";
 
@@ -8,7 +8,7 @@ export const metadata = { title: "Personnel - Permanence" };
 
 export default async function PersonnelPage({ searchParams }: PageProps<"/personnel">) {
   const account = await getCurrentAccount();
-  if (!account || account.role !== "ADMIN") {
+  if (!account || !isManagerRole(account.role)) {
     redirect("/planning");
   }
 

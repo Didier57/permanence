@@ -46,7 +46,7 @@ export type EntryMap = Record<string, Record<string, { userId: string; userName:
 export type PlanningViewProps = {
   view: "week" | "month";
   anchor: string;
-  isAdmin: boolean;
+  canEdit: boolean;
   groups: PlanningGroup[];
   entries: EntryMap;
   pendingResend: { weekYear: number; weekNumber: number } | null;
@@ -123,7 +123,7 @@ function DropCell({
 export function PlanningView({
   view,
   anchor,
-  isAdmin,
+  canEdit,
   groups,
   entries,
   pendingResend,
@@ -135,7 +135,7 @@ export function PlanningView({
     null,
   );
   const [unsent, setUnsent] = useState<{ weekYear: number; weekNumber: number } | null>(
-    isAdmin && pendingResend ? pendingResend : null,
+    canEdit && pendingResend ? pendingResend : null,
   );
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
 
@@ -168,7 +168,7 @@ export function PlanningView({
       | { type: "week"; weekYear: number; weekNumber: number }
       | undefined;
     if (!payload || !target) return;
-    if (!isAdmin) {
+    if (!canEdit) {
       setMessage({ tone: "error", text: "Seul un administrateur peut modifier le planning." });
       return;
     }
@@ -230,7 +230,7 @@ export function PlanningView({
   }
 
   function handleRemove(date: string, groupId: string) {
-    if (!isAdmin) return;
+    if (!canEdit) return;
     startTransition(async () => {
       const result = await removePermanence({ date, groupId });
       if (!result.ok) {
@@ -278,7 +278,7 @@ export function PlanningView({
   const pendingKeys = [unsent, pendingResend]
     .filter((item): item is { weekYear: number; weekNumber: number } => item !== null)
     .map((item) => `${item.weekYear}-${item.weekNumber}`);
-  const showUnsentWarning = isAdmin && view === "week" && pendingKeys.includes(currentWeekKey);
+  const showUnsentWarning = canEdit && view === "week" && pendingKeys.includes(currentWeekKey);
 
   const [sendingWeek, setSendingWeek] = useState(false);
 
@@ -350,7 +350,7 @@ export function PlanningView({
           />
           <div className="ml-auto flex items-center gap-3">
             {isPending ? <span className="text-xs text-slate-400">Enregistrement...</span> : null}
-            {isAdmin && view === "week" ? (
+            {canEdit && view === "week" ? (
               <Button variant="secondary" onClick={handleSendWeek} disabled={sendingWeek}>
                 {sendingWeek ? "Envoi..." : "Envoyer la semaine par email"}
               </Button>
@@ -377,7 +377,7 @@ export function PlanningView({
           <aside className="w-64 shrink-0 self-start rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
             <h2 className="mb-2 text-sm font-semibold text-slate-700">Groupes</h2>
             <p className="mb-3 text-xs text-slate-400">
-              {isAdmin
+              {canEdit
                 ? "Glissez une personne sur le planning pour l'affecter."
                 : "Consultation seule."}
             </p>
@@ -417,7 +417,7 @@ export function PlanningView({
                                 userId={member.id}
                                 name={member.name}
                                 color={group.color}
-                                disabled={!isAdmin}
+                                disabled={!canEdit}
                               />
                             ))
                           )}
@@ -476,7 +476,7 @@ export function PlanningView({
                               <DropCell
                                 id={`cell:${key}:${group.id}`}
                                 data={{ type: "cell", date: key, groupId: group.id }}
-                                disabled={!isAdmin}
+                                disabled={!canEdit}
                                 className={`min-h-[52px] rounded p-1 ${
                                   dateKey(day) === today ? "bg-sky-50/50" : ""
                                 }`}
@@ -487,7 +487,7 @@ export function PlanningView({
                                     className="flex items-center justify-between gap-1 rounded border border-slate-200 border-l-4 bg-white px-2 py-1 text-xs text-slate-700"
                                   >
                                     <span className="truncate">{entry.userName}</span>
-                                    {isAdmin ? (
+                                    {canEdit ? (
                                       <button
                                         type="button"
                                         onClick={() => handleRemove(key, group.id)}
@@ -535,7 +535,7 @@ export function PlanningView({
                           <DropCell
                             id={`week:${info.weekYear}:${info.weekNumber}`}
                             data={{ type: "week", weekYear: info.weekYear, weekNumber: info.weekNumber }}
-                            disabled={!isAdmin}
+                            disabled={!canEdit}
                             title={`Remplir la semaine ${info.weekNumber} (7 jours)`}
                             className="border-b border-slate-100 bg-slate-50 p-2 text-center align-top"
                           >
@@ -583,7 +583,7 @@ export function PlanningView({
                                             </span>{" "}
                                             {entry.userName}
                                           </span>
-                                          {isAdmin ? (
+                                          {canEdit ? (
                                             <button
                                               type="button"
                                               onClick={() => handleRemove(key, groupId)}

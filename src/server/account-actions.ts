@@ -12,7 +12,7 @@ export type AccountActionState = { ok?: boolean; error?: string; message?: strin
 const schema = z.object({
   email: z.string().trim().toLowerCase().pipe(z.email("Adresse email invalide")),
   displayName: z.string().trim().max(150).optional(),
-  role: z.enum(["ADMIN", "USER"]),
+  role: z.enum(["ADMIN", "MANAGER", "USER"]),
   active: z.boolean(),
 });
 

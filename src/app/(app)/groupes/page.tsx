@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/page-header";
-import { getCurrentAccount } from "@/lib/auth";
+import { getCurrentAccount, isManagerRole } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { GroupManager, type GroupView, type UserOption } from "./group-manager";
 
@@ -8,7 +8,7 @@ export const metadata = { title: "Groupes - Permanence" };
 
 export default async function GroupsPage() {
   const account = await getCurrentAccount();
-  if (!account || account.role !== "ADMIN") {
+  if (!account || !isManagerRole(account.role)) {
     redirect("/planning");
   }
 

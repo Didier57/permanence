@@ -9,21 +9,23 @@ const BUTTON_STYLES: Record<ButtonVariant, string> = {
   ghost: "text-slate-600 hover:bg-slate-100",
 };
 
+const BUTTON_BASE =
+  "inline-flex items-center justify-center gap-1 rounded-md px-3 py-1.5 text-sm font-medium shadow-sm transition disabled:cursor-not-allowed disabled:opacity-60";
+
 export function Button({
   variant = "primary",
   className,
   ...props
 }: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: ButtonVariant }) {
-  return (
-    <button
-      {...props}
-      className={cn(
-        "inline-flex items-center justify-center gap-1 rounded-md px-3 py-1.5 text-sm font-medium shadow-sm transition disabled:cursor-not-allowed disabled:opacity-60",
-        BUTTON_STYLES[variant],
-        className,
-      )}
-    />
-  );
+  return <button {...props} className={cn(BUTTON_BASE, BUTTON_STYLES[variant], className)} />;
+}
+
+export function LinkButton({
+  variant = "primary",
+  className,
+  ...props
+}: React.AnchorHTMLAttributes<HTMLAnchorElement> & { variant?: ButtonVariant }) {
+  return <a {...props} className={cn(BUTTON_BASE, BUTTON_STYLES[variant], className)} />;
 }
 
 const FIELD_BASE =

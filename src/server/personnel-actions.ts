@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { createAccountToken, requireAdmin } from "@/lib/auth";
+import { createAccountToken, requireManager } from "@/lib/auth";
 import { generateToken, hashPassword } from "@/lib/crypto";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
@@ -18,7 +18,13 @@ const optionalPhone = z
   .optional()
   .or(z.literal(""));
 
-const accessRole = z.enum(["NONE", "USER", "ADMIN"]);
+const accessRole = z.enum(["NONE", "USER", "MANAGER", "ADMIN"]);
+
+const ASSIGNABLE_ROLES = ["USER", "MANAGER", "ADMIN"] as const;
+
+function isAssignableRole(value: string): value is "USER" | "MANAGER" | "ADMIN" {
+  return (ASSIGNABLE_ROLES as readonly string[]).includes(value);
+}
 
 const userSchema = z.object({
   firstName: z.string().trim().min(1, "Le prenom est requis").max(100),
@@ -32,7 +38,7 @@ const userSchema = z.object({
 
 export async function saveUser(_prev: ActionState, formData: FormData): Promise<ActionState> {
   try {
-    await requireAdmin();
+    await requireManager();
   } catch {
     return { error: "Acces refuse." };
   }
@@ -44,7 +50,11 @@ export async function saveUser(_prev: ActionState, formData: FormData): Promise<
     proPhone: formData.get("proPhone") ?? undefined,
     privatePhone: formData.get("privatePhone") ?? undefined,
     active: formData.get("active") === "on" || formData.get("active") === "true",
-    accessRole: (formData.get("accessRole")?.toString() || "NONE") as "NONE" | "USER" | "ADMIN",
+    accessRole: (formData.get("accessRole")?.toString() || "NONE") as
+      | "NONE"
+      | "USER"
+      | "MANAGER"
+      | "ADMIN",
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Donnees invalides." };
@@ -115,7 +125,7 @@ async function syncAccountAccess(options: {
   userId: string;
   email: string;
   displayName: string;
-  accessRole: "NONE" | "USER" | "ADMIN";
+  accessRole: "NONE" | "USER" | "MANAGER" | "ADMIN";
 }) {
   const existing = await prisma.account.findUnique({ where: { userId: options.userId } });
   const byEmail = await prisma.account.findUnique({ where: { email: options.email } });
@@ -175,7 +185,7 @@ export async function sendAccountInvitation(
 ): Promise<InvitationState> {
   let admin;
   try {
-    admin = await requireAdmin();
+    admin = await requireManager();
   } catch {
     return { error: "Acces refuse." };
   }
@@ -186,7 +196,12 @@ export async function sendAccountInvitation(
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) return { error: "Utilisateur inconnu." };
 
-  const roleInput = (formData.get("role")?.toString() || "") as "NONE" | "USER" | "ADMIN" | "";
+  const roleInput = (formData.get("role")?.toString() || "") as
+    | "NONE"
+    | "USER"
+    | "MANAGER"
+    | "ADMIN"
+    | "";
   let account = await prisma.account.findUnique({ where: { userId } });
 
   if (!account) {
@@ -197,7 +212,7 @@ export async function sendAccountInvitation(
         data: {
           userId: user.id,
           displayName: `${user.firstName} ${user.lastName}`.trim(),
-          role: roleInput === "ADMIN" || roleInput === "USER" ? roleInput : "USER",
+          role: isAssignableRole(roleInput) ? roleInput : "USER",
           active: true,
         },
       });
@@ -206,14 +221,14 @@ export async function sendAccountInvitation(
         data: {
           email: user.email,
           displayName: `${user.firstName} ${user.lastName}`.trim(),
-          role: roleInput === "ADMIN" ? "ADMIN" : "USER",
+          role: isAssignableRole(roleInput) ? roleInput : "USER",
           userId: user.id,
           active: true,
           passwordHash: await hashPassword(generateToken()),
         },
       });
     }
-  } else if (roleInput === "ADMIN" || roleInput === "USER") {
+  } else if (isAssignableRole(roleInput)) {
     account = await prisma.account.update({
       where: { id: account.id },
       data: { role: roleInput, active: true },
@@ -256,7 +271,7 @@ export async function sendAccountInvitation(
 
 
 export async function deleteUser(formData: FormData): Promise<void> {
-  await requireAdmin();
+  await requireManager();
   const id = formData.get("id")?.toString();
   if (!id) return;
   const permanenceCount = await prisma.permanence.count({ where: { userId: id } });

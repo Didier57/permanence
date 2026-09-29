@@ -17,9 +17,13 @@ Chaque personne peut avoir, dans **Personnel**, un champ **Acces a l'application
 
 - **Aucun acces** : la personne existe dans le personnel mais ne peut pas se connecter.
 - **Utilisateur (lecture seule)** : consulte uniquement le planning (semaine et mois), sans rien modifier.
-- **Administrateur** : acces complet (planning, personnel, groupes, emails, configuration, historique).
+- **Gestionnaire** : gere le planning, le personnel (ajout, modification, suppression, invitation et
+  reinitialisation de mot de passe), les groupes (ajout, modification, suppression) et l'envoi des emails.
+- **Administrateur** : acces complet, y compris la configuration SMTP, les comptes d'acces, l'adresse du
+  site et la sauvegarde/restauration.
 
-Un **Utilisateur** ne peut pas modifier le planning : le glisser-deposer est desactive pour lui.
+Un **Utilisateur** ne peut pas modifier le planning : le glisser-deposer est desactive pour lui. La
+configuration SMTP et les comptes d'acces restent reserves aux administrateurs.
 
 ## Invitations et reinitialisation
 
@@ -91,3 +95,18 @@ indique aussi le telephone et l'email de la personne.
 ## Historique
 
 Menu **Historique** : liste des envois (date/heure, semaine, periode, type, destinataires, CC, statut, erreur).
+
+## Sauvegarde et restauration
+
+Menu **Sauvegarde** (administrateurs) : exporte un fichier JSON contenant le **personnel**, les
+**groupes** et leurs membres, le **planning**, la **configuration email** (SMTP, CC, jour et heure
+d'envoi) et l'**adresse du site**. Les comptes d'acces et l'historique des emails ne sont pas inclus.
+
+- **Telecharger la sauvegarde** enregistre le fichier JSON.
+- **Restaurer** propose deux modes :
+  - **Mise a jour** : chaque enregistrement du fichier est ajoute ou met a jour ; les donnees
+    actuelles qui ne figurent pas dans la sauvegarde sont conservees.
+  - **Restauration complete** : le contenu actuel (personnel, groupes, planning) est **supprime**
+    avant l'import. Une confirmation explicite est demandee.
+
+Ce mecanisme complete le dump PostgreSQL decrit dans [Sauvegarde et restauration](sauvegarde-restauration.md).

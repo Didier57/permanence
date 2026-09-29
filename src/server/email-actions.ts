@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { getCurrentAccount, requireAdmin } from "@/lib/auth";
+import { getCurrentAccount, requireAdmin, requireManager } from "@/lib/auth";
 import { encryptSecret } from "@/lib/crypto";
 import { fromDateInput, getISOWeekInfo } from "@/lib/date";
 import { prisma } from "@/lib/db";
@@ -133,7 +133,7 @@ export async function sendWeekEmailNow(input: {
 }): Promise<{ ok: boolean; error?: string; message?: string }> {
   let account;
   try {
-    account = await requireAdmin();
+    account = await requireManager();
   } catch {
     return { ok: false, error: "Acces refuse." };
   }
@@ -163,7 +163,7 @@ export async function resendWeekEmail(input: {
 }): Promise<{ ok: boolean; error?: string; message?: string }> {
   let account;
   try {
-    account = await requireAdmin();
+    account = await requireManager();
   } catch {
     return { ok: false, error: "Acces refuse." };
   }
@@ -192,7 +192,7 @@ export async function sendWeekEmailForDate(
   formData: FormData,
 ): Promise<EmailActionState> {
   try {
-    await requireAdmin();
+    await requireManager();
   } catch {
     return { error: "Acces refuse." };
   }

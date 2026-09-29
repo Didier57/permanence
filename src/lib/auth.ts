@@ -1,6 +1,8 @@
 import { cookies } from "next/headers";
 import { prisma } from "./db";
 import { generateToken, hashPassword, hashToken } from "./crypto";
+import type { AccountRole } from "./roles";
+import { isManagerRole } from "./roles";
 
 export const SESSION_COOKIE = "permanence_session";
 const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 7;
@@ -8,11 +10,14 @@ export const ACCOUNT_TOKEN_TTL_MS = 1000 * 60 * 60 * 72;
 
 export type AccountTokenType = "ACTIVATION" | "RESET";
 
+export type { AccountRole } from "./roles";
+export { ROLE_LABELS, isManagerRole } from "./roles";
+
 export type SessionAccount = {
   id: string;
   email: string;
   displayName: string | null;
-  role: "ADMIN" | "USER";
+  role: AccountRole;
   userId: string | null;
 };
 
@@ -83,6 +88,12 @@ export async function requireAccount(): Promise<SessionAccount> {
 export async function requireAdmin(): Promise<SessionAccount> {
   const account = await requireAccount();
   if (account.role !== "ADMIN") throw new Error("FORBIDDEN");
+  return account;
+}
+
+export async function requireManager(): Promise<SessionAccount> {
+  const account = await requireAccount();
+  if (!isManagerRole(account.role)) throw new Error("FORBIDDEN");
   return account;
 }
 

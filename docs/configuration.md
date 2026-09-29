@@ -49,7 +49,9 @@ planification de la **semaine ISO suivante** aux personnes concernees (une seule
 
 ## Roles et droits
 
-- `ADMIN` : acces complet (planning, personnel, groupes, emails/SMTP, configuration, historique).
+- `ADMIN` : acces complet (planning, personnel, groupes, emails/SMTP, configuration, historique, sauvegarde).
+- `MANAGER` : gere le planning, le personnel, les groupes et l'envoi des emails ; pas d'acces a la
+  configuration SMTP, aux comptes d'acces, a l'adresse du site ni a la sauvegarde.
 - `USER` : acces en lecture seule au planning.
 
 Un compte `ADMIN` peut egalement etre rattache a une fiche du personnel afin d'apparaitre dans le planning.

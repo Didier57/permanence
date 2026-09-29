@@ -6,7 +6,8 @@ et suivi des versions envoyees.
 
 ## Fonctionnalites
 
-- **Authentification** par email + mot de passe, sessions securisees, roles `ADMIN` et `USER`.
+- **Authentification** par email + mot de passe, sessions securisees, roles `ADMIN`, `MANAGER` et `USER`.
+  Les comptes sont actives par un **lien recu par email** (activation, mot de passe oublie).
 - **Personnel** : fiche complete (nom, prenom, telephones, email), recherche, filtre, appartenance a plusieurs groupes.
 - **Groupes** : nom, description, couleur, membres, CRUD complet.
 - **Planning** conforme aux **semaines ISO 8601** (lundi premier jour) :
@@ -21,6 +22,8 @@ et suivi des versions envoyees.
 - **Version de planning** : l'application compare la version envoyee a la version courante et propose
   un renvoi lorsque le planning a ete modifie apres l'envoi.
 - **Historique** de chaque envoi (date, semaine, type, destinataires, CC, statut, erreur, version).
+- **Sauvegarde / restauration** : export JSON du personnel, des groupes, du planning et de la
+  configuration, reimport avec choix **mise a jour** ou **restauration complete**.
 
 ## Architecture
 

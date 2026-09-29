@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/page-header";
 import { Card } from "@/components/ui";
-import { getCurrentAccount } from "@/lib/auth";
+import { getCurrentAccount, isManagerRole } from "@/lib/auth";
 import { dateKey, toUTCDateOnly } from "@/lib/date";
 import { prisma } from "@/lib/db";
 import { EmailConfigForm, type EmailConfigView } from "./email-config-form";
@@ -27,11 +27,14 @@ const EMPTY_CONFIG: EmailConfigView = {
 
 export default async function EmailsPage() {
   const account = await getCurrentAccount();
-  if (!account || account.role !== "ADMIN") {
+  if (!account || !isManagerRole(account.role)) {
     redirect("/planning");
   }
+  const isAdmin = account.role === "ADMIN";
 
-  const record = await prisma.emailConfiguration.findUnique({ where: { id: "default" } });
+  const record = isAdmin
+    ? await prisma.emailConfiguration.findUnique({ where: { id: "default" } })
+    : null;
   const config: EmailConfigView = record
     ? {
         smtpHost: record.smtpHost,
@@ -56,13 +59,19 @@ export default async function EmailsPage() {
     <>
       <PageHeader
         title="Emails / SMTP"
-        description="Configuration du serveur SMTP et envoi des plannings aux personnes concernees."
+        description={
+          isAdmin
+            ? "Configuration du serveur SMTP et envoi des plannings aux personnes concernees."
+            : "Envoi des plannings aux personnes concernees."
+        }
       />
       <main className="flex flex-1 flex-col gap-6 p-6">
-        <Card className="p-6">
-          <h2 className="mb-4 text-base font-semibold text-slate-800">Configuration SMTP</h2>
-          <EmailConfigForm config={config} accountEmail={account.email} />
-        </Card>
+        {isAdmin ? (
+          <Card className="p-6">
+            <h2 className="mb-4 text-base font-semibold text-slate-800">Configuration SMTP</h2>
+            <EmailConfigForm config={config} accountEmail={account.email} />
+          </Card>
+        ) : null}
 
         <Card className="p-6">
           <h2 className="mb-2 text-base font-semibold text-slate-800">Envoi manuel</h2>

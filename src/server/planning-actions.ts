@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { requireAdmin } from "@/lib/auth";
+import { requireManager } from "@/lib/auth";
 import { fromDateInput, getISOWeekInfo, isoWeekRange, weekDays } from "@/lib/date";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
@@ -41,7 +41,7 @@ const fillSchema = z.object({
 
 async function guard(): Promise<{ id: string } | null> {
   try {
-    const account = await requireAdmin();
+    const account = await requireManager();
     return { id: account.id };
   } catch {
     return null;

@@ -2,6 +2,7 @@
 
 import { useActionState, useCallback, useEffect, useState } from "react";
 import { Alert, Button, Card, Field, Input, Select } from "@/components/ui";
+import { ROLE_LABELS } from "@/lib/roles";
 import {
   deleteUser,
   saveUser,
@@ -10,7 +11,7 @@ import {
   type InvitationState,
 } from "@/server/personnel-actions";
 
-export type AccessRole = "NONE" | "USER" | "ADMIN";
+export type AccessRole = "NONE" | "USER" | "MANAGER" | "ADMIN";
 export type AccountStatus = "NONE" | "PENDING" | "ACTIVE" | "DISABLED";
 
 export type UserView = {
@@ -102,11 +103,12 @@ function UserForm({
         <Field
           label="Acces a l'application"
           htmlFor="accessRole"
-          hint="Un utilisateur peut uniquement consulter le planning (semaine / mois). Un administrateur peut tout modifier."
+          hint="Utilisateur : consultation du planning uniquement. Gestionnaire : planning, personnel, groupes et envoi des emails. Administrateur : acces complet, comptes et sauvegarde."
         >
           <Select id="accessRole" name="accessRole" defaultValue={user?.accessRole ?? "NONE"}>
             <option value="NONE">Aucun acces</option>
             <option value="USER">Utilisateur (lecture seule)</option>
+            <option value="MANAGER">Gestionnaire</option>
             <option value="ADMIN">Administrateur</option>
           </Select>
         </Field>
@@ -299,9 +301,9 @@ export function PersonnelManager({
                         ACCOUNT_STATUS_STYLE[user.accountStatus]
                       }`}
                     >
-                      {user.accessRole === "ADMIN" && user.accountStatus === "ACTIVE"
-                        ? "Administrateur"
-                        : ACCOUNT_STATUS_LABEL[user.accountStatus]}
+                  {user.accountStatus === "ACTIVE" && user.accessRole !== "NONE"
+                    ? ROLE_LABELS[user.accessRole]
+                    : ACCOUNT_STATUS_LABEL[user.accountStatus]}
                     </span>
                   </td>
                   <td className="px-4 py-3">

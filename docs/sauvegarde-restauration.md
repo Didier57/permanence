@@ -35,3 +35,25 @@ ls -1t /srv/permanence/backups/permanence-*.sql.gz | tail -n +31 | xargs -r rm -
 Le script arrete les services applicatifs, restaure la base, puis les redemarre.
 
 > La restauration remplace integralement le contenu actuel de la base.
+
+## Sauvegarde applicative (JSON)
+
+Independamment du dump PostgreSQL, les administrateurs disposent du menu **Sauvegarde** qui exporte un
+fichier `permanence-backup-AAAAMMJJ.json` contenant le **personnel**, les **groupes** et leurs membres,
+le **planning**, la **configuration email** (mot de passe SMTP chiffre inclus), l'**adresse du site**
+et ses reglages. Les comptes d'acces et l'historique des emails ne sont pas inclus.
+
+Ce format permet de reimporter les donnees via l'interface (page **Sauvegarde**) :
+
+- **Mise a jour** : chaque enregistrement du fichier est ajoute ou mis a jour, sans supprimer le reste.
+- **Restauration complete** : le personnel, les groupes et le planning actuels sont supprimes avant l'import
+  (confirmation demandee). Les comptes d'acces existants sont rattaches a nouveau aux personnes lorsque
+  leur email correspond.
+
+Le dump PostgreSQL reste la reference pour une restauration a l'identique de toute la base
+(comptes, sessions, historique des emails).
+
+## Conservation recommandee
+
+Combiner les deux approches : dump PostgreSQL quotidien (restauration technique complete) et export
+JSON applicatif avant toute operation importante (reprise selective des referentiels et du planning).

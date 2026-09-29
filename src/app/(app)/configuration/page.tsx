@@ -3,6 +3,7 @@ import { PageHeader } from "@/components/page-header";
 import { Card } from "@/components/ui";
 import { getCurrentAccount } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { ROLE_DESCRIPTIONS, ROLE_LABELS, ROLE_ORDER, roleSortIndex } from "@/lib/roles";
 import { AccountManager, type AccountView, type PersonOption } from "./account-manager";
 import { SiteUrlForm } from "./site-url-form";
 import { getAppConfiguration, getAppUrl } from "@/server/services/app-config";
@@ -17,7 +18,7 @@ export default async function ConfigurationPage() {
 
   const [accounts, users, appConfiguration, effectiveUrl] = await Promise.all([
     prisma.account.findMany({
-      orderBy: [{ role: "asc" }, { email: "asc" }],
+      orderBy: [{ email: "asc" }],
       include: { user: { select: { firstName: true, lastName: true } } },
     }),
     prisma.user.findMany({
@@ -28,15 +29,19 @@ export default async function ConfigurationPage() {
     getAppUrl(),
   ]);
 
-  const accountViews: AccountView[] = accounts.map((item) => ({
-    id: item.id,
-    email: item.email,
-    displayName: item.displayName,
-    role: item.role,
-    active: item.active,
-    userId: item.userId,
-    userName: item.user ? `${item.user.firstName} ${item.user.lastName}` : null,
-  }));
+  const accountViews: AccountView[] = accounts
+    .map((item) => ({
+      id: item.id,
+      email: item.email,
+      displayName: item.displayName,
+      role: item.role,
+      active: item.active,
+      userId: item.userId,
+      userName: item.user ? `${item.user.firstName} ${item.user.lastName}` : null,
+    }))
+    .sort(
+      (a, b) => roleSortIndex(a.role) - roleSortIndex(b.role) || a.email.localeCompare(b.email),
+    );
 
   const people: PersonOption[] = users.map((user) => ({
     id: user.id,
@@ -47,7 +52,7 @@ export default async function ConfigurationPage() {
     <>
       <PageHeader
         title="Configuration"
-        description="Comptes d'acces et droits (administrateur ou utilisateur simple)."
+        description="Comptes d'acces et droits (administrateur, gestionnaire ou utilisateur simple)."
       />
       <main className="flex flex-1 flex-col gap-6 p-6">
         <Card className="p-6">
@@ -83,14 +88,12 @@ export default async function ConfigurationPage() {
               <dt className="font-medium text-slate-700">Fuseau horaire d&apos;envoi</dt>
               <dd>Configure dans le module Emails / SMTP.</dd>
             </div>
-            <div>
-              <dt className="font-medium text-slate-700">Administrateur</dt>
-              <dd>Acces complet (planning, personnel, groupes, emails, comptes).</dd>
-            </div>
-            <div>
-              <dt className="font-medium text-slate-700">Utilisateur simple</dt>
-              <dd>Consultation du planning uniquement.</dd>
-            </div>
+            {ROLE_ORDER.map((role) => (
+              <div key={role}>
+                <dt className="font-medium text-slate-700">{ROLE_LABELS[role]}</dt>
+                <dd>{ROLE_DESCRIPTIONS[role]}</dd>
+              </div>
+            ))}
           </dl>
         </Card>
       </main>
