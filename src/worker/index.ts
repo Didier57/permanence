@@ -6,13 +6,23 @@ import { getEmailConfig, sendWeekEmail } from "@/server/services/email";
 import { checkDatabase, databaseLabel } from "./database";
 import { DEFAULT_CATCH_UP_MINUTES, findDueSlots, findMissedSlots } from "./schedule";
 
+export type TickOutcome = "sent" | "empty" | "skipped";
+
+export type TickDetail = {
+  scheduleId: string;
+  weekYear: number;
+  weekNumber: number;
+  status: TickOutcome;
+  recipientCount?: number;
+};
+
 export type TickResult = {
   status: "disabled" | "done";
   sent: number;
   skipped: number;
   empty: number;
   errors: string[];
-  details: { weekYear: number; weekNumber: number; recipientCount?: number }[];
+  details: TickDetail[];
 };
 
 export type TickOptions = {
@@ -53,6 +63,12 @@ export async function runTick(
     });
     if (alreadySent) {
       result.skipped += 1;
+      result.details.push({
+        scheduleId: item.id,
+        weekYear: item.weekYear,
+        weekNumber: item.weekNumber,
+        status: "skipped",
+      });
       continue;
     }
 
@@ -65,16 +81,26 @@ export async function runTick(
     if (!send.ok) {
       if (send.error === "Aucune permanence pour cette semaine.") {
         result.empty += 1;
+        result.details.push({
+          scheduleId: item.id,
+          weekYear: item.weekYear,
+          weekNumber: item.weekNumber,
+          status: "empty",
+        });
         continue;
       }
-      result.errors.push(send.error ?? "Erreur inconnue.");
+      result.errors.push(
+        `${send.error ?? "Erreur inconnue."} (creneau ${item.id}, semaine ${item.weekNumber}/${item.weekYear})`,
+      );
       continue;
     }
 
     result.sent += 1;
     result.details.push({
+      scheduleId: item.id,
       weekYear: item.weekYear,
       weekNumber: item.weekNumber,
+      status: "sent",
       recipientCount: send.recipientCount,
     });
   }
@@ -109,7 +135,7 @@ async function safeTick(options: TickOptions = {}): Promise<void> {
     if (result.errors.length > 0) {
       logger.error({ errors: result.errors }, "scheduler.tick.error");
     }
-    if (result.sent > 0) {
+    if (result.details.length > 0) {
       logger.info(
         {
           sent: result.sent,
@@ -118,7 +144,7 @@ async function safeTick(options: TickOptions = {}): Promise<void> {
           catchUp: options.catchUpMinutes ?? 0,
           details: result.details,
         },
-        "scheduler.tick.sent",
+        "scheduler.tick.result",
       );
     }
   } catch (error) {
@@ -159,4 +185,7 @@ async function main(): Promise<void> {
   process.on("SIGINT", () => void shutdown("SIGINT"));
 }
 
-void main();
+void main().catch((error: unknown) => {
+  logger.error({ err: error }, "scheduler.start.error");
+  process.exit(1);
+});
