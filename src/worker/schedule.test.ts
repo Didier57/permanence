@@ -4,6 +4,7 @@ import {
   findDueSlots,
   findMissedSlots,
   getZonedParts,
+  nextSlotDateKey,
   parseSendTime,
   slotOccurrence,
 } from "./schedule";
@@ -209,5 +210,40 @@ describe("findMissedSlots", () => {
     expect(
       findMissedSlots(slots, { ...config, enabled: false }, new Date("2026-10-15T07:00:00Z"), 1440),
     ).toEqual([]);
+  });
+});
+
+describe("nextSlotDateKey", () => {
+  const samedi = "Europe/Paris";
+
+  it("passe a la semaine suivante quand le declenchement est passe", () => {
+    // Mardi 29/09/2026 20:05 a Paris : le lundi 28/09 08:00 est derriere nous.
+    expect(
+      nextSlotDateKey({ dayOfWeek: 1, sendTime: "08:00" }, samedi, new Date("2026-09-29T18:05:00Z")),
+    ).toBe("2026-10-05");
+  });
+
+  it("renvoie le jour meme quand le declenchement est a venir", () => {
+    expect(
+      nextSlotDateKey({ dayOfWeek: 2, sendTime: "20:10" }, samedi, new Date("2026-09-29T18:05:00Z")),
+    ).toBe("2026-09-29");
+  });
+
+  it("considere le declenchement en cours comme imminent", () => {
+    expect(
+      nextSlotDateKey({ dayOfWeek: 2, sendTime: "20:10" }, samedi, new Date("2026-09-29T18:10:00Z")),
+    ).toBe("2026-09-29");
+  });
+
+  it("passe a la semaine suivante une minute apres le declenchement", () => {
+    expect(
+      nextSlotDateKey({ dayOfWeek: 2, sendTime: "20:10" }, samedi, new Date("2026-09-29T18:11:00Z")),
+    ).toBe("2026-10-06");
+  });
+
+  it("refuse une heure invalide", () => {
+    expect(
+      nextSlotDateKey({ dayOfWeek: 1, sendTime: "99:99" }, samedi, new Date("2026-09-29T18:05:00Z")),
+    ).toBeNull();
   });
 });

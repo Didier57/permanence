@@ -3,9 +3,9 @@ import { PageHeader } from "@/components/page-header";
 import { T } from "@/components/locale-provider";
 import { Card } from "@/components/ui";
 import { getCurrentAccount, isManagerRole } from "@/lib/auth";
-import { addDays, dateKey, fromDateInput, toUTCDateOnly } from "@/lib/date";
+import { dateKey, toUTCDateOnly } from "@/lib/date";
 import { prisma } from "@/lib/db";
-import { slotOccurrence, targetWeek } from "@/worker/schedule";
+import { nextSlotDateKey, targetWeek } from "@/worker/schedule";
 import { EmailConfigForm, type EmailConfigView } from "./email-config-form";
 import { ManualSendForm } from "./manual-send-form";
 import { SchedulerStatus, FRESH_MINUTES, type SchedulerSlotView } from "./scheduler-status";
@@ -92,13 +92,7 @@ export default async function EmailsPage() {
 
   const schedulerSlots: SchedulerSlotView[] = isAdmin
     ? schedules.map((schedule) => {
-        const occurrence = slotOccurrence(schedule, config.timezone, now);
-        const next = occurrence
-          ? occurrence.offsetMinutes > 0
-            ? addDays(fromDateInput(occurrence.dateKey), 7)
-            : fromDateInput(occurrence.dateKey)
-          : null;
-        const nextKey = next ? dateKey(next) : null;
+        const nextKey = nextSlotDateKey(schedule, config.timezone, now);
         const last = lastAutomaticBySlot.get(schedule.id);
         return {
           id: schedule.id,

@@ -143,6 +143,21 @@ export function targetWeek(
   return { weekYear, weekNumber };
 }
 
+/**
+ * Prochain declenchement d'un creneau, jamais dans le passe : lorsque le
+ * declenchement le plus proche est deja tombe, on passe a la semaine suivante.
+ */
+export function nextSlotDateKey(
+  slot: { dayOfWeek: number; sendTime: string },
+  timezone: string,
+  reference: Date,
+): string | null {
+  const occurrence = slotOccurrence(slot, timezone, reference);
+  if (!occurrence) return null;
+  const base = fromDateInput(occurrence.dateKey);
+  return dateKey(occurrence.offsetMinutes >= 0 ? base : addDays(base, 7));
+}
+
 export type ScheduleSlot = {
   id: string;
   dayOfWeek: number;
