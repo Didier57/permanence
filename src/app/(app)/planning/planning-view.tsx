@@ -29,6 +29,7 @@ import {
   monthEnd,
   monthName,
   monthStart,
+  monthsRange,
   startOfISOWeek,
   weekDays,
 } from "@/lib/date";
@@ -55,7 +56,7 @@ export type UserInfo = {
 };
 
 export type PlanningViewProps = {
-  view: "week" | "month";
+  view: "week" | "month" | "year";
   anchor: string;
   canEdit: boolean;
   groups: PlanningGroup[];
@@ -237,13 +238,18 @@ export function PlanningView({
   const anchorDate = useMemo(() => fromDateInput(anchor), [anchor]);
   const today = dateKey(new Date());
 
-  function navigate(nextView: "week" | "month", nextAnchor: string) {
+  function navigate(nextView: "week" | "month" | "year", nextAnchor: string) {
     router.push(`/planning?view=${nextView}&date=${nextAnchor}`);
   }
 
   function move(delta: number) {
     if (view === "week") {
       navigate("week", dateKey(addDays(anchorDate, delta * 7)));
+    } else if (view === "year") {
+      const next = new Date(
+        Date.UTC(anchorDate.getUTCFullYear(), anchorDate.getUTCMonth() + delta * 3, 1),
+      );
+      navigate("year", dateKey(next));
     } else {
       const next = new Date(Date.UTC(anchorDate.getUTCFullYear(), anchorDate.getUTCMonth() + delta, 1));
       navigate("month", dateKey(next));
@@ -392,6 +398,20 @@ export function PlanningView({
     return weeks;
   }, [monthInfo]);
 
+  const yearWeeks = useMemo(() => {
+    if (view !== "year") return [];
+    const span = monthsRange(anchorDate, 3);
+    const gridStart = startOfISOWeek(span.start);
+    const gridEnd = endOfISOWeek(span.end);
+    const weeks: Date[] = [];
+    let cursor = gridStart;
+    while (cursor.getTime() <= gridEnd.getTime()) {
+      weeks.push(cursor);
+      cursor = addDays(cursor, 7);
+    }
+    return weeks;
+  }, [view, anchorDate]);
+
   const title =
     view === "week"
       ? t("Semaine {week} / {year} - {range}", {
@@ -399,7 +419,14 @@ export function PlanningView({
           year: weekInfo.weekYear,
           range: formatWeekRange(weekStart, days[6], locale),
         })
-      : `${monthName(anchorDate.getUTCMonth(), locale)} ${anchorDate.getUTCFullYear()}`;
+      : view === "year"
+        ? (() => {
+            const span = monthsRange(anchorDate, 3);
+            const startLabel = `${monthName(span.start.getUTCMonth(), locale)} ${span.start.getUTCFullYear()}`;
+            const endLabel = `${monthName(span.end.getUTCMonth(), locale)} ${span.end.getUTCFullYear()}`;
+            return `${startLabel} - ${endLabel}`;
+          })()
+        : `${monthName(anchorDate.getUTCMonth(), locale)} ${anchorDate.getUTCFullYear()}`;
 
   const currentWeekKey = `${weekInfo.weekYear}-${weekInfo.weekNumber}`;
   const pendingKeys = [unsent, pendingResend]
@@ -472,6 +499,13 @@ export function PlanningView({
               className={`px-3 py-1.5 text-sm ${view === "month" ? "bg-sky-600 text-on-brand" : "bg-white text-slate-600"}`}
             >
               {t("Mois")}
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate("year", anchor)}
+              className={`px-3 py-1.5 text-sm ${view === "year" ? "bg-sky-600 text-on-brand" : "bg-white text-slate-600"}`}
+            >
+              {t("Annee")}
             </button>
           </div>
           <div className="flex items-center gap-1">
@@ -665,7 +699,7 @@ export function PlanningView({
                   </tbody>
                 </table>
               </div>
-            ) : (
+            ) : view === "month" ? (
               <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
                 <table className="w-full min-w-[900px] border-collapse">
                   <thead>
@@ -764,6 +798,111 @@ export function PlanningView({
                                     })}
                                   </div>
                                 </div>
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="rounded-lg border border-slate-200 bg-white shadow-sm">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr>
+                      <th className="w-20 border-b border-slate-200 p-2 text-left text-xs uppercase text-slate-500">
+                        {t("Sem.")}
+                      </th>
+                      <th className="border-b border-l border-slate-200 p-2 text-left text-xs uppercase text-slate-500">
+                        {t("Dates")}
+                      </th>
+                      {groups.map((group) => (
+                        <th
+                          key={group.id}
+                          className="border-b border-l border-slate-200 p-2 text-left text-xs uppercase text-slate-500"
+                          title={group.description ?? undefined}
+                        >
+                          <span className="flex items-center gap-2">
+                            <span
+                              className="inline-block h-3 w-3 rounded-full"
+                              style={{ backgroundColor: group.color ?? "#0ea5e9" }}
+                            />
+                            {group.name}
+                          </span>
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {yearWeeks.map((weekStartOfRow) => {
+                      const info = getISOWeekInfo(weekStartOfRow);
+                      const rowEnd = addDays(weekStartOfRow, 6);
+                      const rowDays = weekDays(weekStartOfRow);
+                      return (
+                        <tr key={dateKey(weekStartOfRow)}>
+                          <DropCell
+                            id={`week:${info.weekYear}:${info.weekNumber}`}
+                            data={{ type: "week", weekYear: info.weekYear, weekNumber: info.weekNumber }}
+                            disabled={!canEdit}
+                            title={t("Remplir la semaine {week} (7 jours)", { week: info.weekNumber })}
+                            className={`border-b border-slate-100 p-2 align-top ${
+                              info.weekYear === weekInfo.weekYear && info.weekNumber === weekInfo.weekNumber
+                                ? "bg-sky-50 dark:bg-sky-500/10"
+                                : "bg-slate-50"
+                            }`}
+                          >
+                            <div className="text-sm font-semibold text-slate-700">
+                              S{info.weekNumber}
+                            </div>
+                          </DropCell>
+                          <td className="border-b border-l border-slate-100 p-2 align-top text-sm text-slate-600">
+                            <div className="whitespace-nowrap">
+                              {formatDayMonthFr(weekStartOfRow)} &rarr; {formatDayMonthFr(rowEnd)}
+                            </div>
+                            <div
+                              className={`text-[11px] ${
+                                info.weekYear === weekInfo.weekYear && info.weekNumber === weekInfo.weekNumber
+                                  ? "font-medium text-sky-700 dark:text-sky-300"
+                                  : "text-slate-400"
+                              }`}
+                            >
+                              {info.weekNumber === weekInfo.weekNumber ? t("Semaine en cours") : "\u00a0"}
+                            </div>
+                          </td>
+                          {groups.map((group) => {
+                            const assigned = rowDays.some((day) => entries[dateKey(day)]?.[group.id]);
+                            const firstDay = rowDays.find((day) => entries[dateKey(day)]?.[group.id]);
+                            const entry = firstDay ? entries[dateKey(firstDay)]?.[group.id] : undefined;
+                            const sameAll = entry
+                              ? rowDays.every((day) => {
+                                  const candidate = entries[dateKey(day)]?.[group.id];
+                                  return candidate && candidate.userId === entry.userId;
+                                })
+                              : false;
+                            return (
+                              <td
+                                key={group.id}
+                                className="border-b border-l border-slate-100 p-1 align-top"
+                              >
+                                {entry ? (
+                                  <div
+                                    style={{ borderLeftColor: group.color ?? "#0ea5e9" }}
+                                    className="flex items-center justify-between gap-1 rounded border border-slate-200 border-l-4 bg-white px-1.5 py-0.5 text-[11px] text-slate-700"
+                                  >
+                                    <button
+                                      type="button"
+                                      onClick={() => setSelectedUserId(entry.userId)}
+                                      className="truncate text-left hover:underline"
+                                    >
+                                      {entry.userName}
+                                      {sameAll ? "" : ` *`}
+                                    </button>
+                                  </div>
+                                ) : assigned ? null : (
+                                  <span className="text-[11px] text-slate-300">&mdash;</span>
+                                )}
                               </td>
                             );
                           })}

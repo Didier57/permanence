@@ -148,6 +148,19 @@ export function monthNameFr(month: number): string {
   return FRENCH_MONTHS[month];
 }
 
+/**
+ * Plage de `count` mois (3 par defaut) centree sur le mois de `anchor`.
+ * Retourne le premier jour du premier mois et le dernier jour du dernier mois.
+ */
+export function monthsRange(anchor: Date, count = 3): { start: Date; end: Date } {
+  const year = anchor.getUTCFullYear();
+  const month = anchor.getUTCMonth();
+  return {
+    start: monthStart(year, month),
+    end: monthEnd(year, month + count - 1),
+  };
+}
+
 /* ------------------------------------------------------------------ *
  * Variantes localisees (fr / en)
  * ------------------------------------------------------------------ */

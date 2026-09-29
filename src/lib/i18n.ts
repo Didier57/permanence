@@ -138,6 +138,8 @@ export const EN_MESSAGES: Record<string, string> = {
   // Planning
   Semaine: "Week",
   Mois: "Month",
+  Annee: "Year",
+  Dates: "Dates",
   "Aujourd'hui": "Today",
   "Sem.": "Wk.",
   remplir: "fill",

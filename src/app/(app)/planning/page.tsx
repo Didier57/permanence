@@ -7,6 +7,7 @@ import {
   getISOWeekInfo,
   monthEnd,
   monthStart,
+  monthsRange,
   startOfISOWeek,
 } from "@/lib/date";
 import { prisma } from "@/lib/db";
@@ -24,7 +25,7 @@ export default async function PlanningPage({ searchParams }: PageProps<"/plannin
   }
 
   const sp = await searchParams;
-  const view = sp.view === "month" ? "month" : "week";
+  const view = sp.view === "month" ? "month" : sp.view === "year" ? "year" : "week";
   const anchorRaw =
     typeof sp.date === "string" && DATE_RE.test(sp.date) ? sp.date : dateKey(new Date());
   const anchorDate = fromDateInput(anchorRaw);
@@ -35,7 +36,15 @@ export default async function PlanningPage({ searchParams }: PageProps<"/plannin
           start: startOfISOWeek(monthStart(anchorDate.getUTCFullYear(), anchorDate.getUTCMonth())),
           end: endOfISOWeek(monthEnd(anchorDate.getUTCFullYear(), anchorDate.getUTCMonth())),
         }
-      : { start: startOfISOWeek(anchorDate), end: endOfISOWeek(anchorDate) };
+      : view === "year"
+        ? (() => {
+            const span = monthsRange(anchorDate, 3);
+            return {
+              start: startOfISOWeek(span.start),
+              end: endOfISOWeek(span.end),
+            };
+          })()
+        : { start: startOfISOWeek(anchorDate), end: endOfISOWeek(anchorDate) };
 
   const [groups, permanences, users] = await Promise.all([
     prisma.group.findMany({
