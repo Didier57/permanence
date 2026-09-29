@@ -19,6 +19,19 @@ permet de changer son propre mot de passe.
   et le **mode sombre**. Le choix est memorise par le navigateur ; sans choix explicite,
   l'application suit le reglage du systeme.
 
+## Langue (francais / anglais)
+
+L'application est disponible en **francais** et en **anglais** :
+
+- **Langue de l'interface** : dans **Mon compte**, choisir la langue. Chaque compte a la sienne ;
+  le choix est aussi memorise par le navigateur.
+- **Langue des emails** : sur la fiche d'une personne (**Personnel**), le champ **Langue des emails**
+  determine la langue du planning recu par cette personne. Chaque destinataire recoit donc l'email
+  dans sa propre langue.
+- Sur les pages publiques (**Connexion**, **Mot de passe oublie**), un selecteur de langue est disponible.
+
+Les noms de groupes et de personnes ne sont jamais traduits.
+
 ## Roles et acces
 
 Chaque personne peut avoir, dans **Personnel**, un champ **Acces a l'application** :

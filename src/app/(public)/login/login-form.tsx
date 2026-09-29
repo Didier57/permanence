@@ -1,18 +1,20 @@
 "use client";
 
 import { useActionState } from "react";
+import { useTranslations } from "@/components/locale-provider";
 import { loginAction, type LoginState } from "@/server/auth-actions";
 
 const initialState: LoginState = {};
 
 export function LoginForm() {
   const [state, formAction, pending] = useActionState(loginAction, initialState);
+  const t = useTranslations();
 
   return (
     <form action={formAction} className="flex w-full flex-col gap-4">
       <div className="flex flex-col gap-1">
         <label htmlFor="identifier" className="text-sm font-medium text-slate-700">
-          Identifiant ou email
+          {t("Identifiant ou email")}
         </label>
         <input
           id="identifier"
@@ -27,7 +29,7 @@ export function LoginForm() {
 
       <div className="flex flex-col gap-1">
         <label htmlFor="password" className="text-sm font-medium text-slate-700">
-          Mot de passe
+          {t("Mot de passe")}
         </label>
         <input
           id="password"
@@ -44,7 +46,7 @@ export function LoginForm() {
           className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-500/15 dark:text-red-300"
           role="alert"
         >
-          {state.error}
+          {t(state.error)}
         </p>
       ) : null}
 
@@ -53,7 +55,7 @@ export function LoginForm() {
         disabled={pending}
         className="rounded-md bg-sky-600 px-4 py-2 text-sm font-semibold text-on-brand shadow-sm transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {pending ? "Connexion..." : "Se connecter"}
+        {pending ? t("Connexion...") : t("Se connecter")}
       </button>
     </form>
   );

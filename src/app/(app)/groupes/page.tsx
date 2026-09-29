@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/page-header";
+import { T } from "@/components/locale-provider";
 import { getCurrentAccount, isManagerRole } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { GroupManager, type GroupView, type UserOption } from "./group-manager";
@@ -51,8 +52,10 @@ export default async function GroupsPage() {
   return (
     <>
       <PageHeader
-        title="Groupes"
-        description="Un groupe regroupe des personnes. Un membre peut appartenir a plusieurs groupes."
+        title={<T msg="Groupes" />}
+        description={
+          <T msg="Un groupe regroupe des personnes. Un membre peut appartenir a plusieurs groupes." />
+        }
       />
       <main className="flex-1 p-6">
         <GroupManager groups={groupViews} users={userOptions} />

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { resolveLocale } from "@/lib/i18n";
 import { fromDateInput, dateKey, getISOWeekInfo, toUTCDateOnly } from "@/lib/date";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
@@ -16,6 +17,7 @@ export type BackupData = {
     privatePhone: string | null;
     email: string;
     active: boolean;
+    locale: "fr" | "en";
     createdAt: string;
     updatedAt: string;
   }[];
@@ -92,6 +94,7 @@ export async function createBackup(): Promise<BackupData> {
       privatePhone: user.privatePhone,
       email: user.email,
       active: user.active,
+      locale: resolveLocale(user.locale),
       createdAt: user.createdAt.toISOString(),
       updatedAt: user.updatedAt.toISOString(),
     })),
@@ -165,6 +168,7 @@ const backupSchema = z.object({
         privatePhone: z.string().nullish(),
         email: z.string(),
         active: z.boolean().optional(),
+        locale: z.enum(["fr", "en"]).optional(),
         createdAt: z.string().optional(),
         updatedAt: z.string().optional(),
       }),
@@ -293,6 +297,7 @@ export async function restoreBackup(input: unknown, mode: RestoreMode): Promise<
               privatePhone: user.privatePhone ?? null,
               email: user.email,
               active: user.active ?? true,
+              locale: user.locale ?? "fr",
               createdAt: optionalDate(user.createdAt) ?? undefined,
             },
           });
@@ -325,6 +330,7 @@ export async function restoreBackup(input: unknown, mode: RestoreMode): Promise<
                 proPhone: user.proPhone ?? null,
                 privatePhone: user.privatePhone ?? null,
                 active: user.active ?? true,
+                locale: user.locale ?? "fr",
               },
             });
             userIdMap.set(user.id, existing.id);
@@ -338,6 +344,7 @@ export async function restoreBackup(input: unknown, mode: RestoreMode): Promise<
                 privatePhone: user.privatePhone ?? null,
                 email: user.email,
                 active: user.active ?? true,
+                locale: user.locale ?? "fr",
                 createdAt: optionalDate(user.createdAt) ?? undefined,
               },
             });

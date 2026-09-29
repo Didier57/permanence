@@ -19,6 +19,7 @@ export type SessionAccount = {
   displayName: string | null;
   role: AccountRole;
   userId: string | null;
+  locale: string;
 };
 
 export async function createSession(
@@ -67,6 +68,7 @@ export async function getCurrentAccount(): Promise<SessionAccount | null> {
     displayName: account.displayName,
     role: account.role,
     userId: account.userId,
+    locale: account.locale,
   };
 }
 

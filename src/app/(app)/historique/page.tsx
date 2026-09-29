@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { T } from "@/components/locale-provider";
 import { PageHeader } from "@/components/page-header";
 import { Card } from "@/components/ui";
 import { getCurrentAccount, isManagerRole } from "@/lib/auth";
@@ -40,24 +41,38 @@ export default async function HistoryPage() {
   return (
     <>
       <PageHeader
-        title="Historique des emails"
-        description="Trace de chaque envoi : date, semaine, type, destinataires et statut."
+        title={<T msg="Historique des emails" />}
+        description={<T msg="Trace de chaque envoi : date, semaine, type, destinataires et statut." />}
       />
       <main className="flex-1 p-6">
         <Card className="overflow-x-auto">
           {history.length === 0 ? (
-            <p className="p-6 text-sm text-slate-500">Aucun envoi enregistre.</p>
+            <p className="p-6 text-sm text-slate-500">
+              <T msg="Aucun envoi enregistre." />
+            </p>
           ) : (
             <table className="w-full min-w-[900px] text-sm">
               <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
                 <tr>
-                  <th className="px-4 py-3">Date d&apos;envoi</th>
-                  <th className="px-4 py-3">Semaine</th>
-                  <th className="px-4 py-3">Periode</th>
-                  <th className="px-4 py-3">Type</th>
-                  <th className="px-4 py-3">Destinataires</th>
+                  <th className="px-4 py-3">
+                    <T msg="Date d'envoi" />
+                  </th>
+                  <th className="px-4 py-3">
+                    <T msg="Semaine" />
+                  </th>
+                  <th className="px-4 py-3">
+                    <T msg="Periode" />
+                  </th>
+                  <th className="px-4 py-3">
+                    <T msg="Type" />
+                  </th>
+                  <th className="px-4 py-3">
+                    <T msg="Destinataires" />
+                  </th>
                   <th className="px-4 py-3">CC</th>
-                  <th className="px-4 py-3">Statut</th>
+                  <th className="px-4 py-3">
+                    <T msg="Statut" />
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -73,7 +88,7 @@ export default async function HistoryPage() {
                       {formatDateFr(entry.weekStart)} - {formatDateFr(entry.weekEnd)}
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-slate-600">
-                      {TYPE_LABELS[entry.type] ?? entry.type}
+                      <T msg={TYPE_LABELS[entry.type] ?? entry.type} />
                     </td>
                     <td className="px-4 py-3 text-slate-600">
                       <span className="font-medium text-slate-800">{entry.recipients.length}</span>
@@ -94,7 +109,7 @@ export default async function HistoryPage() {
                             : "rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-500/15 dark:text-red-300"
                         }
                       >
-                        {STATUS_LABELS[entry.status] ?? entry.status}
+                        <T msg={STATUS_LABELS[entry.status] ?? entry.status} />
                       </span>
                       {entry.error ? (
                         <p className="mt-1 max-w-[220px] text-xs text-red-600">{entry.error}</p>

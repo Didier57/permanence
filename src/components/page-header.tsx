@@ -3,8 +3,8 @@ export function PageHeader({
   description,
   children,
 }: {
-  title: string;
-  description?: string;
+  title: React.ReactNode;
+  description?: React.ReactNode;
   children?: React.ReactNode;
 }) {
   return (

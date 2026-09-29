@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/page-header";
+import { T } from "@/components/locale-provider";
 import { Card } from "@/components/ui";
 import { getCurrentAccount } from "@/lib/auth";
 import { prisma } from "@/lib/db";
@@ -51,16 +52,18 @@ export default async function ConfigurationPage() {
   return (
     <>
       <PageHeader
-        title="Configuration"
-        description="Comptes d'acces et droits (administrateur, gestionnaire ou utilisateur simple)."
+        title={<T msg="Configuration" />}
+        description={
+          <T msg="Comptes d'acces et droits (administrateur, gestionnaire ou utilisateur simple)." />
+        }
       />
       <main className="flex flex-1 flex-col gap-6 p-6">
         <Card className="p-6">
-          <h2 className="mb-2 text-base font-semibold text-slate-800">Adresse du site</h2>
+          <h2 className="mb-2 text-base font-semibold text-slate-800">
+            <T msg="Adresse du site" />
+          </h2>
           <p className="mb-4 text-sm text-slate-500">
-            Adresse publique de l&apos;application, utilisee dans les liens d&apos;activation et de
-            reinitialisation envoyes par email. Si elle n&apos;est pas renseignee ici, la valeur par
-            defaut du serveur est utilisee.
+            <T msg="Adresse publique de l'application, utilisee dans les liens d'activation et de reinitialisation envoyes par email. Si elle n'est pas renseignee ici, la valeur par defaut du serveur est utilisee." />
           </p>
           <SiteUrlForm
             configuredUrl={appConfiguration?.appUrl ?? ""}
@@ -69,7 +72,9 @@ export default async function ConfigurationPage() {
         </Card>
 
         <Card className="p-6">
-          <h2 className="mb-4 text-base font-semibold text-slate-800">Comptes et droits</h2>
+          <h2 className="mb-4 text-base font-semibold text-slate-800">
+            <T msg="Comptes et droits" />
+          </h2>
           <AccountManager
             accounts={accountViews}
             people={people}
@@ -78,20 +83,34 @@ export default async function ConfigurationPage() {
         </Card>
 
         <Card className="p-6">
-          <h2 className="mb-2 text-base font-semibold text-slate-800">Informations</h2>
+          <h2 className="mb-2 text-base font-semibold text-slate-800">
+            <T msg="Informations" />
+          </h2>
           <dl className="grid gap-2 text-sm text-slate-600 md:grid-cols-2">
             <div>
-              <dt className="font-medium text-slate-700">Numeros de semaine</dt>
-              <dd>Norme ISO 8601, lundi comme premier jour.</dd>
+              <dt className="font-medium text-slate-700">
+                <T msg="Numeros de semaine" />
+              </dt>
+              <dd>
+                <T msg="Norme ISO 8601, lundi comme premier jour." />
+              </dd>
             </div>
             <div>
-              <dt className="font-medium text-slate-700">Fuseau horaire d&apos;envoi</dt>
-              <dd>Configure dans le module Emails / SMTP.</dd>
+              <dt className="font-medium text-slate-700">
+                <T msg="Fuseau horaire d'envoi" />
+              </dt>
+              <dd>
+                <T msg="Configure dans le module Emails / SMTP." />
+              </dd>
             </div>
             {ROLE_ORDER.map((role) => (
               <div key={role}>
-                <dt className="font-medium text-slate-700">{ROLE_LABELS[role]}</dt>
-                <dd>{ROLE_DESCRIPTIONS[role]}</dd>
+                <dt className="font-medium text-slate-700">
+                  <T msg={ROLE_LABELS[role]} />
+                </dt>
+                <dd>
+                  <T msg={ROLE_DESCRIPTIONS[role]} />
+                </dd>
               </div>
             ))}
           </dl>

@@ -1,3 +1,5 @@
+import type { Locale } from "@/lib/i18n";
+
 const MS_PER_DAY = 86_400_000;
 
 const FRENCH_DAYS_LOWER = [
@@ -144,4 +146,85 @@ export function monthEnd(year: number, month: number): Date {
 
 export function monthNameFr(month: number): string {
   return FRENCH_MONTHS[month];
+}
+
+/* ------------------------------------------------------------------ *
+ * Variantes localisees (fr / en)
+ * ------------------------------------------------------------------ */
+
+const ENGLISH_DAYS_LOWER = [
+  "sunday",
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+];
+
+const ENGLISH_DAYS_CAPITALIZED = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+];
+
+const ENGLISH_MONTHS = [
+  "january",
+  "february",
+  "march",
+  "april",
+  "may",
+  "june",
+  "july",
+  "august",
+  "september",
+  "october",
+  "november",
+  "december",
+];
+
+export function dayName(date: Date, locale: Locale = "fr"): string {
+  return locale === "en"
+    ? ENGLISH_DAYS_LOWER[date.getUTCDay()]
+    : FRENCH_DAYS_LOWER[date.getUTCDay()];
+}
+
+export function dayNameCapitalized(date: Date, locale: Locale = "fr"): string {
+  return locale === "en"
+    ? ENGLISH_DAYS_CAPITALIZED[date.getUTCDay()]
+    : FRENCH_DAYS_CAPITALIZED[date.getUTCDay()];
+}
+
+export function monthName(month: number, locale: Locale = "fr"): string {
+  return locale === "en" ? ENGLISH_MONTHS[month] : FRENCH_MONTHS[month];
+}
+
+export function formatLongDate(date: Date, locale: Locale = "fr"): string {
+  const month = monthName(date.getUTCMonth(), locale);
+  if (locale === "en") {
+    return `${dayNameCapitalized(date, locale)} ${date.getUTCDate()} ${month} ${date.getUTCFullYear()}`;
+  }
+  return `${dayName(date, locale)} ${date.getUTCDate()} ${month} ${date.getUTCFullYear()}`;
+}
+
+export function formatWeekRange(start: Date, end: Date, locale: Locale = "fr"): string {
+  if (locale === "en") {
+    return `From ${formatLongDate(start, locale)} to ${formatLongDate(end, locale)}`;
+  }
+  return `Du ${formatLongDate(start, locale)} au ${formatLongDate(end, locale)}`;
+}
+
+export function formatWeekRangeShort(start: Date, end: Date, locale: Locale = "fr"): string {
+  if (locale === "en") {
+    return `From ${formatDateFr(start)} to ${formatDateFr(end)}`;
+  }
+  return `Du ${formatDateFr(start)} au ${formatDateFr(end)}`;
+}
+
+export function rangeConnector(locale: Locale = "fr"): string {
+  return locale === "en" ? "to" : "à";
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useTranslations } from "@/components/locale-provider";
 import { cn } from "@/lib/cn";
 import { sanitizeRichText } from "@/lib/html";
 
@@ -45,6 +46,7 @@ export function RichTextEditor({
   const sourceRef = useRef<HTMLTextAreaElement>(null);
   const [mode, setMode] = useState<"visual" | "source">("visual");
   const [color, setColor] = useState("#0f172a");
+  const t = useTranslations();
 
   useEffect(() => {
     const el = editorRef.current;
@@ -88,7 +90,7 @@ export function RichTextEditor({
   function createLink() {
     const el = editorRef.current;
     if (!el) return;
-    const url = window.prompt("Adresse du lien (https://...)", "https://");
+    const url = window.prompt(t("Adresse du lien (https://...)"), "https://");
     if (!url || !url.trim() || url.trim() === "https://") return;
     const selection = window.getSelection();
     const hasSelection =
@@ -162,16 +164,16 @@ export function RichTextEditor({
       <input type="hidden" name={name} ref={inputRef} defaultValue={defaultValue} />
 
       <div className="flex flex-wrap items-center gap-1 border-b border-slate-200 bg-slate-50 p-2">
-        <button type="button" className={TOOL_BUTTON} onClick={() => exec("bold")} title="Gras">
+        <button type="button" className={TOOL_BUTTON} onClick={() => exec("bold")} title={t("Gras")}>
           <strong>G</strong>
         </button>
-        <button type="button" className={TOOL_BUTTON} onClick={() => exec("italic")} title="Italique">
+        <button type="button" className={TOOL_BUTTON} onClick={() => exec("italic")} title={t("Italique")}>
           <em>I</em>
         </button>
-        <button type="button" className={TOOL_BUTTON} onClick={() => exec("underline")} title="Souligne">
+        <button type="button" className={TOOL_BUTTON} onClick={() => exec("underline")} title={t("Souligne")}>
           <span className="underline">S</span>
         </button>
-        <button type="button" className={TOOL_BUTTON} onClick={() => exec("strikeThrough")} title="Barre">
+        <button type="button" className={TOOL_BUTTON} onClick={() => exec("strikeThrough")} title={t("Barre")}>
           <span className="line-through">A</span>
         </button>
 
@@ -181,11 +183,11 @@ export function RichTextEditor({
           className="rounded border border-slate-300 bg-white px-1 py-1 text-xs"
           defaultValue=""
           onChange={(event) => exec("fontName", event.target.value)}
-          title="Police"
+          title={t("Police")}
         >
           {FONTS.map((font) => (
             <option key={font.label} value={font.value}>
-              {font.label}
+              {t(font.label)}
             </option>
           ))}
         </select>
@@ -196,18 +198,18 @@ export function RichTextEditor({
           onChange={(event) => {
             if (event.target.value) exec("fontSize", event.target.value);
           }}
-          title="Taille de police"
+          title={t("Taille de police")}
         >
           {SIZES.map((size) => (
             <option key={size.label} value={size.value}>
-              {size.label}
+              {t(size.label)}
             </option>
           ))}
         </select>
 
         <span className="mx-1 h-5 w-px bg-slate-300" />
 
-        <span className="flex items-center gap-1" title="Couleur du texte">
+        <span className="flex items-center gap-1" title={t("Couleur du texte")}>
           <input
             type="color"
             value={color}
@@ -219,66 +221,66 @@ export function RichTextEditor({
               key={swatch}
               type="button"
               onClick={() => applyColor(swatch)}
-              title={`Couleur ${swatch}`}
-              aria-label={`Couleur ${swatch}`}
+              title={t("Couleur {color}", { color: swatch })}
+              aria-label={t("Couleur {color}", { color: swatch })}
               className="h-5 w-5 rounded border border-slate-300"
               style={{ backgroundColor: swatch }}
             />
           ))}
         </span>
-        <button type="button" className={TOOL_BUTTON} onClick={() => exec("hiliteColor", "#fef08a")} title="Surligner">
-          Surligner
+        <button type="button" className={TOOL_BUTTON} onClick={() => exec("hiliteColor", "#fef08a")} title={t("Surligner")}>
+          {t("Surligner")}
         </button>
 
         <span className="mx-1 h-5 w-px bg-slate-300" />
 
-        <button type="button" className={TOOL_BUTTON} onClick={() => exec("formatBlock", "<h2>")} title="Titre">
-          Titre
+        <button type="button" className={TOOL_BUTTON} onClick={() => exec("formatBlock", "<h2>")} title={t("Titre")}>
+          {t("Titre")}
         </button>
-        <button type="button" className={TOOL_BUTTON} onClick={() => exec("formatBlock", "<h3>")} title="Sous-titre">
-          Sous-titre
+        <button type="button" className={TOOL_BUTTON} onClick={() => exec("formatBlock", "<h3>")} title={t("Sous-titre")}>
+          {t("Sous-titre")}
         </button>
-        <button type="button" className={TOOL_BUTTON} onClick={() => exec("formatBlock", "<p>")} title="Paragraphe">
-          Paragraphe
+        <button type="button" className={TOOL_BUTTON} onClick={() => exec("formatBlock", "<p>")} title={t("Paragraphe")}>
+          {t("Paragraphe")}
         </button>
 
         <span className="mx-1 h-5 w-px bg-slate-300" />
 
-        <button type="button" className={TOOL_BUTTON} onClick={createLink} title="Inserer un lien">
-          Lien
+        <button type="button" className={TOOL_BUTTON} onClick={createLink} title={t("Inserer un lien")}>
+          {t("Lien")}
         </button>
-        <button type="button" className={TOOL_BUTTON} onClick={removeLink} title="Retirer le lien">
-          Sans lien
+        <button type="button" className={TOOL_BUTTON} onClick={removeLink} title={t("Retirer le lien")}>
+          {t("Sans lien")}
         </button>
         <span className="mx-1 h-5 w-px bg-slate-300" />
 
-        <button type="button" className={TOOL_BUTTON} onClick={() => exec("insertUnorderedList")} title="Liste a puces">
-          Liste
+        <button type="button" className={TOOL_BUTTON} onClick={() => exec("insertUnorderedList")} title={t("Liste a puces")}>
+          {t("Liste")}
         </button>
-        <button type="button" className={TOOL_BUTTON} onClick={() => exec("insertOrderedList")} title="Liste numerotee">
+        <button type="button" className={TOOL_BUTTON} onClick={() => exec("insertOrderedList")} title={t("Liste numerotee")}>
           1.
         </button>
-        <button type="button" className={TOOL_BUTTON} onClick={() => exec("justifyLeft")} title="Aligner a gauche">
-          Gauche
+        <button type="button" className={TOOL_BUTTON} onClick={() => exec("justifyLeft")} title={t("Aligner a gauche")}>
+          {t("Gauche")}
         </button>
-        <button type="button" className={TOOL_BUTTON} onClick={() => exec("justifyCenter")} title="Centrer">
-          Centre
+        <button type="button" className={TOOL_BUTTON} onClick={() => exec("justifyCenter")} title={t("Centrer")}>
+          {t("Centre")}
         </button>
-        <button type="button" className={TOOL_BUTTON} onClick={() => exec("justifyRight")} title="Aligner a droite">
-          Droite
+        <button type="button" className={TOOL_BUTTON} onClick={() => exec("justifyRight")} title={t("Aligner a droite")}>
+          {t("Droite")}
         </button>
-        <button type="button" className={TOOL_BUTTON} onClick={() => exec("removeFormat")} title="Effacer la mise en forme">
-          Effacer
+        <button type="button" className={TOOL_BUTTON} onClick={() => exec("removeFormat")} title={t("Effacer la mise en forme")}>
+          {t("Effacer")}
         </button>
 
         <span className="ml-auto" />
         {mode === "visual" ? (
-          <button type="button" className={TOOL_BUTTON} onClick={switchToSource} title="Modifier le code HTML">
+          <button type="button" className={TOOL_BUTTON} onClick={switchToSource} title={t("Modifier le code HTML")}>
             HTML
           </button>
         ) : (
-          <button type="button" className={TOOL_BUTTON} onClick={switchToVisual} title="Revenir a l'editeur visuel">
-            Visuel
+          <button type="button" className={TOOL_BUTTON} onClick={switchToVisual} title={t("Revenir a l'editeur visuel")}>
+            {t("Visuel")}
           </button>
         )}
       </div>

@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/page-header";
+import { T } from "@/components/locale-provider";
 import { getCurrentAccount, isManagerRole } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { PersonnelManager, type GroupOption, type UserView } from "./personnel-manager";
@@ -52,6 +53,7 @@ export default async function PersonnelPage({ searchParams }: PageProps<"/person
     proPhone: user.proPhone,
     privatePhone: user.privatePhone,
     active: user.active,
+    locale: user.locale,
     groupIds: user.memberships.map((membership) => membership.groupId),
     groups: user.memberships
       .map((membership) => ({ id: membership.groupId, name: membership.group.name }))
@@ -71,7 +73,10 @@ export default async function PersonnelPage({ searchParams }: PageProps<"/person
 
   return (
     <>
-      <PageHeader title="Personnel" description="Personnes et affectation aux groupes" />
+      <PageHeader
+        title={<T msg="Personnel" />}
+        description={<T msg="Personnes et affectation aux groupes" />}
+      />
       <main className="flex-1 p-6">
         <PersonnelManager users={userViews} groups={groupOptions} query={q} groupId={groupId} />
       </main>

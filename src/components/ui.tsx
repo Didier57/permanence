@@ -58,10 +58,10 @@ export function Field({
   children,
   hint,
 }: {
-  label: string;
+  label: React.ReactNode;
   htmlFor?: string;
   children: React.ReactNode;
-  hint?: string;
+  hint?: React.ReactNode;
 }) {
   return (
     <div className="flex flex-col gap-1">

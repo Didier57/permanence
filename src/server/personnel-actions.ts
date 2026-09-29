@@ -5,6 +5,7 @@ import { z } from "zod";
 import { createAccountToken, requireManager } from "@/lib/auth";
 import { generateToken, hashPassword } from "@/lib/crypto";
 import { prisma } from "@/lib/db";
+import { LOCALES, resolveLocale } from "@/lib/i18n";
 import { logger } from "@/lib/logger";
 import { buildAccountLinkUrl, sendAccountEmail } from "./services/email";
 import { getAppUrl } from "./services/app-config";
@@ -33,6 +34,7 @@ const userSchema = z.object({
   proPhone: optionalPhone,
   privatePhone: optionalPhone,
   active: z.boolean(),
+  locale: z.enum(LOCALES).default("fr"),
   accessRole: accessRole.default("NONE"),
 });
 
@@ -50,6 +52,7 @@ export async function saveUser(_prev: ActionState, formData: FormData): Promise<
     proPhone: formData.get("proPhone") ?? undefined,
     privatePhone: formData.get("privatePhone") ?? undefined,
     active: formData.get("active") === "on" || formData.get("active") === "true",
+    locale: (formData.get("locale")?.toString() || "fr") as "fr" | "en",
     accessRole: (formData.get("accessRole")?.toString() || "NONE") as
       | "NONE"
       | "USER"
@@ -66,7 +69,7 @@ export async function saveUser(_prev: ActionState, formData: FormData): Promise<
     .map((value) => String(value))
     .filter(Boolean);
 
-  const { firstName, lastName, email, accessRole } = parsed.data;
+  const { firstName, lastName, email, accessRole, locale } = parsed.data;
   const proPhone = parsed.data.proPhone?.trim() ? parsed.data.proPhone.trim() : null;
   const privatePhone = parsed.data.privatePhone?.trim() ? parsed.data.privatePhone.trim() : null;
 
@@ -84,7 +87,7 @@ export async function saveUser(_prev: ActionState, formData: FormData): Promise<
     await prisma.$transaction([
       prisma.user.update({
         where: { id },
-        data: { firstName, lastName, email, proPhone, privatePhone, active: parsed.data.active },
+        data: { firstName, lastName, email, proPhone, privatePhone, active: parsed.data.active, locale },
       }),
       prisma.userGroup.deleteMany({ where: { userId: id } }),
       prisma.userGroup.createMany({
@@ -101,6 +104,7 @@ export async function saveUser(_prev: ActionState, formData: FormData): Promise<
         proPhone,
         privatePhone,
         active: parsed.data.active,
+        locale,
         memberships: { create: groupIds.map((groupId) => ({ groupId })) },
       },
     });
@@ -244,6 +248,7 @@ export async function sendAccountInvitation(
     name: `${user.firstName} ${user.lastName}`.trim(),
     url,
     expiresAt,
+    locale: resolveLocale(user.locale),
   });
 
   logger.info({ userId, kind, sent: result.ok, by: admin.email }, "account.invitation");
@@ -264,8 +269,8 @@ export async function sendAccountInvitation(
   return {
     ok: true,
     message: account.activatedAt
-      ? `Lien de reinitialisation envoye a ${account.email}.`
-      : `Invitation envoyee a ${account.email}.`,
+      ? "Lien de reinitialisation envoye a {email}."
+      : "Invitation envoyee a {email}.",
   };
 }
 

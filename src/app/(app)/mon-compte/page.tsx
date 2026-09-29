@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/page-header";
+import { LanguageSelect } from "@/components/language-select";
+import { T } from "@/components/locale-provider";
 import { Card } from "@/components/ui";
 import { getCurrentAccount } from "@/lib/auth";
 import { ROLE_LABELS } from "@/lib/roles";
@@ -15,8 +17,8 @@ export default async function MonComptePage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Mon compte"
-        description="Informations de connexion et mot de passe."
+        title={<T msg="Mon compte" />}
+        description={<T msg="Informations de connexion et mot de passe." />}
       />
 
       <Card className="p-5">
@@ -26,20 +28,29 @@ export default async function MonComptePage() {
             <dd className="font-medium text-slate-900">{account.email}</dd>
           </div>
           <div>
-            <dt className="text-slate-500">Nom affiche</dt>
+            <dt className="text-slate-500">
+              <T msg="Nom affiche" />
+            </dt>
             <dd className="font-medium text-slate-900">{account.displayName ?? "-"}</dd>
           </div>
           <div>
-            <dt className="text-slate-500">Droits</dt>
+            <dt className="text-slate-500">
+              <T msg="Droits" />
+            </dt>
             <dd className="font-medium text-slate-900">
-              {ROLE_LABELS[account.role]}
+              <T msg={ROLE_LABELS[account.role]} />
             </dd>
+          </div>
+          <div>
+            <LanguageSelect id="account-locale" />
           </div>
         </dl>
       </Card>
 
       <Card className="p-5">
-        <h2 className="mb-4 text-base font-semibold text-slate-900">Modifier mon mot de passe</h2>
+        <h2 className="mb-4 text-base font-semibold text-slate-900">
+          <T msg="Modifier mon mot de passe" />
+        </h2>
         <PasswordForm />
       </Card>
     </div>

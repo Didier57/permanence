@@ -42,6 +42,7 @@ model User {
   proPhone     String?  @map("pro_phone")
   privatePhone String?  @map("private_phone")
   email        String   @unique
+  locale       String   @default("fr")
   active       Boolean  @default(true)
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
@@ -115,6 +116,7 @@ model Account {
   userId       String?   @unique @map("user_id")
   activatedAt  DateTime? @map("activated_at")
   lastLoginAt  DateTime? @map("last_login_at")
+  locale       String    @default("fr")
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
 

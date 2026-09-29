@@ -18,19 +18,20 @@ import { Button, Input } from "@/components/ui";
 import {
   addDays,
   dateKey,
-  dayNameFr,
-  dayNameFrCapitalized,
+  dayName,
+  dayNameCapitalized,
   endOfISOWeek,
   formatDayMonthFr,
-  formatWeekRangeFr,
+  formatWeekRange,
   fromDateInput,
   getISOWeekInfo,
   monthEnd,
-  monthNameFr,
+  monthName,
   monthStart,
   startOfISOWeek,
   weekDays,
 } from "@/lib/date";
+import { useLocale, useTranslations } from "@/components/locale-provider";
 import { assignPermanence, fillWeek, removePermanence } from "@/server/planning-actions";
 import { resendWeekEmail, sendWeekEmailNow } from "@/server/email-actions";
 
@@ -129,6 +130,8 @@ export function PlanningView({
   pendingResend,
 }: PlanningViewProps) {
   const router = useRouter();
+  const t = useTranslations();
+  const locale = useLocale();
   const [isPending, startTransition] = useTransition();
   const [active, setActive] = useState<DragPayload | null>(null);
   const [message, setMessage] = useState<{ tone: "error" | "success" | "info"; text: string } | null>(
@@ -174,11 +177,11 @@ export function PlanningView({
       | undefined;
     if (!payload || !target) return;
     if (!canEdit) {
-      setMessage({ tone: "error", text: "Seul un administrateur peut modifier le planning." });
+      setMessage({ tone: "error", text: t("Seul un administrateur peut modifier le planning.") });
       return;
     }
     if (!isMemberOfGroup(payload.userId, target.type === "cell" ? target.groupId : payload.groupId)) {
-      setMessage({ tone: "error", text: "Cette personne n'appartient pas a ce groupe." });
+      setMessage({ tone: "error", text: t("Cette personne n'appartient pas a ce groupe.") });
       return;
     }
 
@@ -190,13 +193,13 @@ export function PlanningView({
           userId: payload.userId,
         });
         if (!result.ok) {
-          setMessage({ tone: "error", text: result.error ?? "Erreur." });
+          setMessage({ tone: "error", text: t(result.error ?? "Erreur.") });
           return;
         }
         if (result.unchanged) return;
         setMessage({
           tone: "success",
-          text: result.replaced ? "Permanence remplacee." : "Permanence enregistree.",
+          text: result.replaced ? t("Permanence remplacee.") : t("Permanence enregistree."),
         });
         if (result.needsResend && result.weekYear && result.weekNumber) {
           setUnsent({ weekYear: result.weekYear, weekNumber: result.weekNumber });
@@ -212,7 +215,9 @@ export function PlanningView({
       if (
         existing &&
         !window.confirm(
-          `Cette operation va remplacer les permanences existantes de la semaine ${target.weekNumber}. Continuer ?`,
+          t("Cette operation va remplacer les permanences existantes de la semaine {week}. Continuer ?", {
+            week: target.weekNumber,
+          }),
         )
       ) {
         return;
@@ -225,12 +230,15 @@ export function PlanningView({
         userId: payload.userId,
       });
       if (!result.ok) {
-        setMessage({ tone: "error", text: result.error ?? "Erreur." });
+        setMessage({ tone: "error", text: t(result.error ?? "Erreur.") });
         return;
       }
       setMessage({
         tone: "success",
-        text: `Semaine ${target.weekNumber} remplie pour ${payload.userName}.`,
+        text: t("Semaine {week} remplie pour {name}.", {
+          week: target.weekNumber,
+          name: payload.userName,
+        }),
       });
       if (result.needsResend && result.weekYear && result.weekNumber) {
         setUnsent({ weekYear: result.weekYear, weekNumber: result.weekNumber });
@@ -243,10 +251,10 @@ export function PlanningView({
     startTransition(async () => {
       const result = await removePermanence({ date, groupId });
       if (!result.ok) {
-        setMessage({ tone: "error", text: result.error ?? "Erreur." });
+        setMessage({ tone: "error", text: t(result.error ?? "Erreur.") });
         return;
       }
-      setMessage({ tone: "success", text: "Permanence supprimee." });
+      setMessage({ tone: "success", text: t("Permanence supprimee.") });
       if (result.needsResend && result.weekYear && result.weekNumber) {
         setUnsent({ weekYear: result.weekYear, weekNumber: result.weekNumber });
       }
@@ -280,8 +288,12 @@ export function PlanningView({
 
   const title =
     view === "week"
-      ? `Semaine ${weekInfo.weekNumber} / ${weekInfo.weekYear} - ${formatWeekRangeFr(weekStart, days[6])}`
-      : `${monthNameFr(anchorDate.getUTCMonth())} ${anchorDate.getUTCFullYear()}`;
+      ? t("Semaine {week} / {year} - {range}", {
+          week: weekInfo.weekNumber,
+          year: weekInfo.weekYear,
+          range: formatWeekRange(weekStart, days[6], locale),
+        })
+      : `${monthName(anchorDate.getUTCMonth(), locale)} ${anchorDate.getUTCFullYear()}`;
 
   const currentWeekKey = `${weekInfo.weekYear}-${weekInfo.weekNumber}`;
   const pendingKeys = [unsent, pendingResend]
@@ -294,7 +306,10 @@ export function PlanningView({
   function handleSendWeek() {
     const target = { weekYear: weekInfo.weekYear, weekNumber: weekInfo.weekNumber };
     const confirmed = window.confirm(
-      `Envoyer par email le planning de la semaine ${target.weekNumber} (${target.weekYear}) ?`,
+      t("Envoyer par email le planning de la semaine {week} ({year}) ?", {
+        week: target.weekNumber,
+        year: target.weekYear,
+      }),
     );
     if (!confirmed) return;
 
@@ -305,11 +320,11 @@ export function PlanningView({
         : await sendWeekEmailNow(target);
       setSendingWeek(false);
       if (!result.ok) {
-        setMessage({ tone: "error", text: result.error ?? "Erreur lors de l'envoi." });
+        setMessage({ tone: "error", text: t(result.error ?? "Erreur lors de l'envoi.") });
         return;
       }
       setUnsent(null);
-      setMessage({ tone: "success", text: result.message ?? "Planning envoye par email." });
+      setMessage({ tone: "success", text: t(result.message ?? "Planning envoye par email.") });
     });
   }
 
@@ -319,7 +334,7 @@ export function PlanningView({
         <div className="flex flex-wrap items-center gap-3 rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
           {showUnsentWarning ? (
             <span className="text-base font-bold text-red-600">
-              La modification de la semaine en cours n&apos;a pas été envoyée.
+              {t("La modification de la semaine en cours n'a pas été envoyée.")}
             </span>
           ) : null}
           <div className="flex overflow-hidden rounded-md border border-slate-300">
@@ -328,14 +343,14 @@ export function PlanningView({
               onClick={() => navigate("week", anchor)}
               className={`px-3 py-1.5 text-sm ${view === "week" ? "bg-sky-600 text-on-brand" : "bg-white text-slate-600"}`}
             >
-              Semaine
+              {t("Semaine")}
             </button>
             <button
               type="button"
               onClick={() => navigate("month", anchor)}
               className={`px-3 py-1.5 text-sm ${view === "month" ? "bg-sky-600 text-on-brand" : "bg-white text-slate-600"}`}
             >
-              Mois
+              {t("Mois")}
             </button>
           </div>
           <div className="flex items-center gap-1">
@@ -346,7 +361,7 @@ export function PlanningView({
               &rarr;
             </Button>
             <Button variant="secondary" onClick={() => navigate(view, dateKey(new Date()))}>
-              Aujourd&apos;hui
+              {t("Aujourd'hui")}
             </Button>
           </div>
           <Input
@@ -358,10 +373,10 @@ export function PlanningView({
             className="w-40"
           />
           <div className="ml-auto flex items-center gap-3">
-            {isPending ? <span className="text-xs text-slate-400">Enregistrement...</span> : null}
+            {isPending ? <span className="text-xs text-slate-400">{t("Enregistrement...")}</span> : null}
             {canEdit && view === "week" ? (
               <Button variant="secondary" onClick={handleSendWeek} disabled={sendingWeek}>
-                {sendingWeek ? "Envoi..." : "Envoyer la semaine par email"}
+                {sendingWeek ? t("Envoi...") : t("Envoyer la semaine par email")}
               </Button>
             ) : null}
             <span className="text-sm font-medium text-slate-700">{title}</span>
@@ -384,15 +399,15 @@ export function PlanningView({
 
         <div className="flex flex-1 gap-4">
           <aside className="w-64 shrink-0 self-start rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
-            <h2 className="mb-2 text-sm font-semibold text-slate-700">Groupes</h2>
+            <h2 className="mb-2 text-sm font-semibold text-slate-700">{t("Groupes")}</h2>
             <p className="mb-3 text-xs text-slate-400">
               {canEdit
-                ? "Glissez une personne sur le planning pour l'affecter."
-                : "Consultation seule."}
+                ? t("Glissez une personne sur le planning pour l'affecter.")
+                : t("Consultation seule.")}
             </p>
             <div className="flex flex-col gap-2">
               {groups.length === 0 ? (
-                <p className="text-xs text-slate-400">Aucun groupe.</p>
+                <p className="text-xs text-slate-400">{t("Aucun groupe.")}</p>
               ) : (
                 groups.map((group) => {
                   const isCollapsed = collapsed[group.id] ?? false;
@@ -417,7 +432,7 @@ export function PlanningView({
                       {isCollapsed ? null : (
                         <div className="flex flex-col gap-1 px-2 pb-2">
                           {group.members.length === 0 ? (
-                            <p className="text-xs text-slate-400">Aucun membre.</p>
+                            <p className="text-xs text-slate-400">{t("Aucun membre.")}</p>
                           ) : (
                             group.members.map((member) => (
                               <DraggableUser
@@ -442,7 +457,7 @@ export function PlanningView({
           <main className="min-w-0 flex-1">
             {groups.length === 0 ? (
               <p className="text-sm text-slate-500">
-                Creez au moins un groupe pour commencer.
+                {t("Creez au moins un groupe pour commencer.")}
               </p>
             ) : view === "week" ? (
               <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
@@ -450,7 +465,7 @@ export function PlanningView({
                   <thead>
                     <tr>
                       <th className="w-40 border-b border-slate-200 p-2 text-left text-xs uppercase text-slate-500">
-                        Groupe
+                        {t("Groupe")}
                       </th>
                       {days.map((day) => (
                         <th
@@ -461,7 +476,7 @@ export function PlanningView({
                               : "text-slate-600"
                           }`}
                         >
-                          <div className="font-semibold">{dayNameFrCapitalized(day)}</div>
+                          <div className="font-semibold">{dayNameCapitalized(day, locale)}</div>
                           <div className="text-[11px] text-slate-400">{formatDayMonthFr(day)}</div>
                         </th>
                       ))}
@@ -506,7 +521,7 @@ export function PlanningView({
                                         type="button"
                                         onClick={() => handleRemove(key, group.id)}
                                         className="text-slate-400 hover:text-red-600"
-                                        title="Retirer"
+                                        title={t("Retirer")}
                                       >
                                         &times;
                                       </button>
@@ -528,14 +543,14 @@ export function PlanningView({
                   <thead>
                     <tr>
                       <th className="w-16 border-b border-slate-200 p-2 text-left text-xs uppercase text-slate-500">
-                        Sem.
+                        {t("Sem.")}
                       </th>
                       {days.map((day) => (
                         <th
-                          key={dayNameFr(day)}
+                          key={dayName(day, locale)}
                           className="border-b border-l border-slate-200 p-2 text-center text-xs uppercase text-slate-500"
                         >
-                          {dayNameFr(day)}
+                          {dayName(day, locale)}
                         </th>
                       ))}
                     </tr>
@@ -550,13 +565,13 @@ export function PlanningView({
                             id={`week:${info.weekYear}:${info.weekNumber}`}
                             data={{ type: "week", weekYear: info.weekYear, weekNumber: info.weekNumber }}
                             disabled={!canEdit}
-                            title={`Remplir la semaine ${info.weekNumber} (7 jours)`}
+                            title={t("Remplir la semaine {week} (7 jours)", { week: info.weekNumber })}
                             className="border-b border-slate-100 bg-slate-50 p-2 text-center align-top"
                           >
                             <div className="text-sm font-semibold text-slate-700">
                               S{info.weekNumber}
                             </div>
-                            <div className="text-[10px] text-slate-400">remplir</div>
+                            <div className="text-[10px] text-slate-400">{t("remplir")}</div>
                           </DropCell>
                           {rowDays.map((day) => {
                             const key = dateKey(day);
@@ -602,7 +617,7 @@ export function PlanningView({
                                               type="button"
                                               onClick={() => handleRemove(key, groupId)}
                                               className="text-slate-400 hover:text-red-600"
-                                              title="Retirer"
+                                              title={t("Retirer")}
                                             >
                                               &times;
                                             </button>

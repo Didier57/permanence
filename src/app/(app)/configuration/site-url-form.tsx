@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { Alert, Button, Field, Input } from "@/components/ui";
+import { useTranslations } from "@/components/locale-provider";
 import {
   saveAppConfiguration,
   type AppConfigurationActionState,
@@ -17,13 +18,14 @@ export function SiteUrlForm({
   effectiveUrl: string;
 }) {
   const [state, formAction, pending] = useActionState(saveAppConfiguration, INITIAL);
+  const t = useTranslations();
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
       <Field
-        label="Adresse du site"
+        label={t("Adresse du site")}
         htmlFor="appUrl"
-        hint="Utilisee pour construire les liens envoyes par email (activation, reinitialisation). Laissez vide pour utiliser la valeur par defaut."
+        hint={t("Utilisee pour construire les liens envoyes par email (activation, reinitialisation). Laissez vide pour utiliser la valeur par defaut.")}
       >
         <Input
           id="appUrl"
@@ -35,15 +37,15 @@ export function SiteUrlForm({
         />
       </Field>
 
-      {state.error ? <Alert tone="error">{state.error}</Alert> : null}
-      {state.ok && state.message ? <Alert tone="success">{state.message}</Alert> : null}
+      {state.error ? <Alert tone="error">{t(state.error)}</Alert> : null}
+      {state.ok && state.message ? <Alert tone="success">{t(state.message)}</Alert> : null}
 
       <div className="flex flex-wrap items-center gap-3">
         <Button type="submit" disabled={pending}>
-          {pending ? "Enregistrement..." : "Enregistrer l'adresse"}
+          {pending ? t("Enregistrement...") : t("Enregistrer l'adresse")}
         </Button>
         <p className="text-xs text-slate-500">
-          Adresse actuellement utilisee : <span className="font-medium">{effectiveUrl}</span>
+          {t("Adresse actuellement utilisee :")} <span className="font-medium">{effectiveUrl}</span>
         </p>
       </div>
     </form>

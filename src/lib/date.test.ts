@@ -1,10 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
   addDays,
+  dayName,
+  dayNameCapitalized,
+  formatWeekRangeShort,
   formatWeekRangeShortFr,
   getISOWeekInfo,
   isoWeekRange,
   isoWeekStart,
+  monthName,
+  rangeConnector,
   startOfISOWeek,
   weekDays,
 } from "./date";
@@ -61,5 +66,29 @@ describe("formatage francais", () => {
   it("formate la periode courte de la semaine", () => {
     const { start, end } = isoWeekRange(2026, 42);
     expect(formatWeekRangeShortFr(start, end)).toBe("Du 12/10/2026 au 18/10/2026");
+  });
+});
+
+describe("formatage anglais", () => {
+  const monday = new Date(Date.UTC(2026, 9, 12));
+
+  it("nomme les jours en anglais", () => {
+    expect(dayName(monday, "en")).toBe("monday");
+    expect(dayNameCapitalized(monday, "en")).toBe("Monday");
+  });
+
+  it("nomme les mois en anglais", () => {
+    expect(monthName(9, "en")).toBe("october");
+  });
+
+  it("formate la periode courte de la semaine", () => {
+    const { start, end } = isoWeekRange(2026, 42);
+    expect(formatWeekRangeShort(start, end, "en")).toBe("From 12/10/2026 to 18/10/2026");
+    expect(rangeConnector("en")).toBe("to");
+  });
+
+  it("conserve le francais par defaut", () => {
+    expect(dayNameCapitalized(monday)).toBe("Lundi");
+    expect(monthName(9)).toBe("octobre");
   });
 });

@@ -1,0 +1,2 @@
+ALTER TABLE "users" ADD COLUMN "locale" TEXT NOT NULL DEFAULT 'fr';
+ALTER TABLE "accounts" ADD COLUMN "locale" TEXT NOT NULL DEFAULT 'fr';

@@ -60,3 +60,14 @@ planification de la **semaine ISO suivante** aux personnes concernees (une seule
 
 Un compte `ADMIN` peut egalement etre rattache a une fiche du personnel afin d'apparaitre dans le planning.
 Les comptes sont geres dans le menu **Configuration**.
+
+## Langue
+
+La langue n'est pas un reglage global : elle est portee par les donnees.
+
+- `Account.locale` (`fr` ou `en`, defaut `fr`) : langue de l'**interface** du compte, choisie dans
+  **Mon compte**.
+- `User.locale` (`fr` ou `en`, defaut `fr`) : langue des **emails** envoyes a cette personne, choisie
+  sur sa fiche dans **Personnel**.
+
+Les deux champs sont inclus dans la sauvegarde/restauration (`docs/sauvegarde-restauration.md`).

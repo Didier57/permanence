@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "@/components/locale-provider";
 import { cn } from "@/lib/cn";
 
 export const DEFAULT_GROUP_COLOR = "#3b82f6";
@@ -36,6 +37,7 @@ export function ColorPicker({
   defaultValue?: string | null;
 }) {
   const [value, setValue] = useState(toHex(defaultValue));
+  const t = useTranslations();
 
   return (
     <div className="flex flex-col gap-2">
@@ -46,7 +48,7 @@ export function ColorPicker({
           type="color"
           value={value}
           onChange={(event) => setValue(event.target.value)}
-          aria-label="Choisir une couleur"
+          aria-label={t("Choisir une couleur")}
           className="h-9 w-14 cursor-pointer rounded border border-slate-300 bg-white p-1"
         />
         <span className="font-mono text-xs text-slate-500">{value}</span>
@@ -58,7 +60,7 @@ export function ColorPicker({
             type="button"
             onClick={() => setValue(swatch)}
             title={swatch}
-            aria-label={`Couleur ${swatch}`}
+            aria-label={t("Couleur {color}", { color: swatch })}
             className={cn(
               "h-6 w-6 rounded border",
               value === swatch

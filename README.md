@@ -23,6 +23,7 @@ et suivi des versions envoyees.
   un renvoi lorsque le planning a ete modifie apres l'envoi.
 - **Historique** de chaque envoi (date, semaine, type, destinataires, CC, statut, erreur, version).
 - **Interface** : menu lateral repliable en icones et **mode sombre** memorise par le navigateur.
+- **Langue** : interface et emails en **francais ou anglais**. Chaque compte choisit la langue de l'interface (Mon compte) et chaque personne la langue des emails recus (fiche Personnel).
 - **Sauvegarde / restauration** : export JSON du personnel, des comptes d'acces, des groupes, du
   planning et de la configuration, reimport avec choix **mise a jour** ou **restauration complete**.
 

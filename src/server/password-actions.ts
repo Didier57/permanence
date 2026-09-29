@@ -11,6 +11,7 @@ import {
 import { verifyPassword } from "@/lib/crypto";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
+import { resolveLocale } from "@/lib/i18n";
 import { buildAccountLinkUrl, sendAccountEmail } from "./services/email";
 import { getAppUrl } from "./services/app-config";
 
@@ -110,6 +111,7 @@ export async function requestPasswordResetAction(
     name: account.displayName,
     url,
     expiresAt,
+    locale: resolveLocale(account.locale),
   });
 
   if (!result.ok) {

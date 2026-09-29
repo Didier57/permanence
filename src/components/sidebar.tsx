@@ -16,6 +16,7 @@ import {
   UsersIcon,
 } from "@/components/icons";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { useTranslations } from "@/components/locale-provider";
 import { logoutAction } from "@/server/auth-actions";
 import { ROLE_LABELS, type AccountRole } from "@/lib/roles";
 
@@ -57,6 +58,7 @@ export function Sidebar({
   displayName: string;
 }) {
   const pathname = usePathname();
+  const t = useTranslations();
 
   function toggleCollapsed() {
     const root = document.documentElement;
@@ -80,7 +82,7 @@ export function Sidebar({
         <button
           type="button"
           onClick={toggleCollapsed}
-          title="Reduire ou deplier le menu"
+          title={t("Reduire ou deplier le menu")}
           aria-label="Réduire ou déplier le menu"
           className="rounded-md p-1.5 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
         >
@@ -97,7 +99,7 @@ export function Sidebar({
             <Link
               key={item.href}
               href={item.href}
-              title={item.label}
+              title={t(item.label)}
               className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition sidebar-collapsed:justify-center sidebar-collapsed:px-2 ${
                 active
                   ? "bg-sky-100 text-sky-800 dark:bg-sky-500/15 dark:text-sky-300"
@@ -105,7 +107,7 @@ export function Sidebar({
               }`}
             >
               <Icon className="h-5 w-5 shrink-0" />
-              <span className="truncate sidebar-collapsed:hidden">{item.label}</span>
+              <span className="truncate sidebar-collapsed:hidden">{t(item.label)}</span>
             </Link>
           );
         })}
@@ -115,18 +117,18 @@ export function Sidebar({
         <p className="px-3 pb-2 text-xs text-slate-500 sidebar-collapsed:hidden">
           {displayName}
           <span className="ml-1 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-slate-500">
-            {ROLE_LABELS[role]}
+            {t(ROLE_LABELS[role])}
           </span>
         </p>
         <ThemeToggle />
         <form action={logoutAction}>
           <button
             type="submit"
-            title="Deconnexion"
+            title={t("Deconnexion")}
             className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-medium text-red-600 transition hover:bg-red-50 sidebar-collapsed:justify-center sidebar-collapsed:px-2 dark:hover:bg-red-500/10"
           >
             <LogoutIcon className="h-5 w-5 shrink-0" />
-            <span className="sidebar-collapsed:hidden">Deconnexion</span>
+            <span className="sidebar-collapsed:hidden">{t("Deconnexion")}</span>
           </button>
         </form>
       </div>

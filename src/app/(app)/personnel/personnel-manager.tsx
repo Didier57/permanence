@@ -2,6 +2,8 @@
 
 import { useActionState, useCallback, useEffect, useState } from "react";
 import { Alert, Button, Card, Field, Input, Select } from "@/components/ui";
+import { useTranslations } from "@/components/locale-provider";
+import { LOCALES, LOCALE_LABELS } from "@/lib/i18n";
 import { ROLE_LABELS } from "@/lib/roles";
 import {
   deleteUser,
@@ -22,6 +24,7 @@ export type UserView = {
   proPhone: string | null;
   privatePhone: string | null;
   active: boolean;
+  locale: string;
   groupIds: string[];
   groups: { id: string; name: string }[];
   permanenceCount: number;
@@ -43,6 +46,7 @@ function UserForm({
   onDone: () => void;
 }) {
   const [state, action, pending] = useActionState(saveUser, initialState);
+  const t = useTranslations();
 
   useEffect(() => {
     if (state.ok) onDone();
@@ -51,33 +55,48 @@ function UserForm({
   return (
     <Card className="p-4">
       <h2 className="mb-3 text-base font-semibold text-slate-800">
-        {user ? `Modifier ${user.firstName} ${user.lastName}` : "Nouvelle personne"}
+        {user
+          ? t("Modifier {name}", { name: `${user.firstName} ${user.lastName}` })
+          : t("Nouvelle personne")}
       </h2>
       <form action={action} className="flex flex-col gap-3">
         {user ? <input type="hidden" name="id" value={user.id} /> : null}
 
         <div className="grid gap-3 md:grid-cols-2">
-          <Field label="Prenom" htmlFor="firstName">
+          <Field label={t("Prenom")} htmlFor="firstName">
             <Input id="firstName" name="firstName" defaultValue={user?.firstName ?? ""} required maxLength={100} />
           </Field>
-          <Field label="Nom" htmlFor="lastName">
+          <Field label={t("Nom")} htmlFor="lastName">
             <Input id="lastName" name="lastName" defaultValue={user?.lastName ?? ""} required maxLength={100} />
           </Field>
           <Field label="Email" htmlFor="email">
             <Input id="email" name="email" type="email" defaultValue={user?.email ?? ""} required />
           </Field>
-          <Field label="Telephone professionnel" htmlFor="proPhone">
+          <Field label={t("Telephone professionnel")} htmlFor="proPhone">
             <Input id="proPhone" name="proPhone" defaultValue={user?.proPhone ?? ""} />
           </Field>
-          <Field label="Telephone prive" htmlFor="privatePhone">
+          <Field label={t("Telephone prive")} htmlFor="privatePhone">
             <Input id="privatePhone" name="privatePhone" defaultValue={user?.privatePhone ?? ""} />
+          </Field>
+          <Field
+            label={t("Langue des emails")}
+            htmlFor="locale"
+            hint={t("Langue utilisee pour les emails envoyes a cette personne.")}
+          >
+            <Select id="locale" name="locale" defaultValue={user?.locale ?? "fr"}>
+              {LOCALES.map((locale) => (
+                <option key={locale} value={locale}>
+                  {LOCALE_LABELS[locale]}
+                </option>
+              ))}
+            </Select>
           </Field>
         </div>
 
         <fieldset className="flex flex-col gap-2">
-          <legend className="text-sm font-medium text-slate-700">Groupes</legend>
+          <legend className="text-sm font-medium text-slate-700">{t("Groupes")}</legend>
           {groups.length === 0 ? (
-            <p className="text-sm text-slate-400">Aucun groupe disponible.</p>
+            <p className="text-sm text-slate-400">{t("Aucun groupe disponible.")}</p>
           ) : (
             <div className="grid grid-cols-1 gap-1 rounded-md border border-slate-200 p-2 sm:grid-cols-2 lg:grid-cols-3">
               {groups.map((group) => (
@@ -97,30 +116,32 @@ function UserForm({
 
         <label className="flex items-center gap-2 text-sm text-slate-700">
           <input type="checkbox" name="active" defaultChecked={user?.active ?? true} />
-          Actif
+          {t("Actif")}
         </label>
 
         <Field
-          label="Acces a l'application"
+          label={t("Acces a l'application")}
           htmlFor="accessRole"
-          hint="Utilisateur : consultation du planning uniquement. Gestionnaire : planning, personnel, groupes et envoi des emails. Administrateur : acces complet, comptes et sauvegarde."
+          hint={t(
+            "Utilisateur : consultation du planning uniquement. Gestionnaire : planning, personnel, groupes et envoi des emails. Administrateur : acces complet, comptes et sauvegarde.",
+          )}
         >
           <Select id="accessRole" name="accessRole" defaultValue={user?.accessRole ?? "NONE"}>
-            <option value="NONE">Aucun acces</option>
-            <option value="USER">Utilisateur (lecture seule)</option>
-            <option value="MANAGER">Gestionnaire</option>
-            <option value="ADMIN">Administrateur</option>
+            <option value="NONE">{t("Aucun acces")}</option>
+            <option value="USER">{t("Utilisateur (lecture seule)")}</option>
+            <option value="MANAGER">{t("Gestionnaire")}</option>
+            <option value="ADMIN">{t("Administrateur")}</option>
           </Select>
         </Field>
 
-        {state.error ? <Alert>{state.error}</Alert> : null}
+        {state.error ? <Alert>{t(state.error)}</Alert> : null}
 
         <div className="flex gap-2">
           <Button type="submit" disabled={pending}>
-            {pending ? "Enregistrement..." : "Enregistrer"}
+            {pending ? t("Enregistrement...") : t("Enregistrer")}
           </Button>
           <Button type="button" variant="secondary" onClick={onDone}>
-            Annuler
+            {t("Annuler")}
           </Button>
         </div>
       </form>
@@ -146,13 +167,14 @@ const invitationInitialState: InvitationState = {};
 
 function InvitationButton({ user }: { user: UserView }) {
   const [state, action, pending] = useActionState(sendAccountInvitation, invitationInitialState);
+  const t = useTranslations();
 
   const label =
     user.accountStatus === "ACTIVE"
-      ? "Reinitialiser le mot de passe"
+      ? t("Reinitialiser le mot de passe")
       : user.accountStatus === "PENDING"
-        ? "Renvoyer l'invitation"
-        : "Inviter";
+        ? t("Renvoyer l'invitation")
+        : t("Inviter");
 
   return (
     <div className="flex flex-col items-end gap-1">
@@ -164,13 +186,17 @@ function InvitationButton({ user }: { user: UserView }) {
           value={user.accessRole === "NONE" ? "USER" : user.accessRole}
         />
         <Button type="submit" variant="secondary" disabled={pending}>
-          {pending ? "Envoi..." : label}
+          {pending ? t("Envoi...") : label}
         </Button>
       </form>
 
-      {state.error ? <p className="max-w-64 text-right text-xs text-red-600">{state.error}</p> : null}
+      {state.error ? (
+        <p className="max-w-64 text-right text-xs text-red-600">{t(state.error)}</p>
+      ) : null}
       {state.message ? (
-        <p className="max-w-64 text-right text-xs text-slate-500">{state.message}</p>
+        <p className="max-w-64 text-right text-xs text-slate-500">
+          {t(state.message, { email: user.email })}
+        </p>
       ) : null}
       {state.link ? (
         <input
@@ -197,6 +223,7 @@ export function PersonnelManager({
 }) {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<UserView | null>(null);
+  const t = useTranslations();
 
   const close = useCallback(() => {
     setFormOpen(false);
@@ -207,18 +234,18 @@ export function PersonnelManager({
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <form method="get" className="flex flex-wrap items-end gap-2">
-          <Field label="Recherche" htmlFor="q">
+          <Field label={t("Recherche")} htmlFor="q">
             <Input
               id="q"
               name="q"
               defaultValue={query}
-              placeholder="Nom, email, telephone"
+              placeholder={t("Nom, email, telephone")}
               className="w-56"
             />
           </Field>
-          <Field label="Groupe" htmlFor="groupId">
+          <Field label={t("Groupe")} htmlFor="groupId">
             <Select id="groupId" name="groupId" defaultValue={groupId} className="w-48">
-              <option value="">Tous les groupes</option>
+              <option value="">{t("Tous les groupes")}</option>
               {groups.map((group) => (
                 <option key={group.id} value={group.id}>
                   {group.name}
@@ -227,7 +254,7 @@ export function PersonnelManager({
             </Select>
           </Field>
           <Button type="submit" variant="secondary">
-            Filtrer
+            {t("Filtrer")}
           </Button>
         </form>
 
@@ -237,7 +264,7 @@ export function PersonnelManager({
             setFormOpen(true);
           }}
         >
-          Nouvelle personne
+          {t("Nouvelle personne")}
         </Button>
       </div>
 
@@ -249,20 +276,20 @@ export function PersonnelManager({
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-500">
-              <th className="px-4 py-2">Nom</th>
+              <th className="px-4 py-2">{t("Nom")}</th>
               <th className="px-4 py-2">Email</th>
-              <th className="px-4 py-2">Tel. pro</th>
-              <th className="px-4 py-2">Tel. prive</th>
-              <th className="px-4 py-2">Groupes</th>
-              <th className="px-4 py-2">Acces</th>
-              <th className="px-4 py-2 text-right">Actions</th>
+              <th className="px-4 py-2">{t("Tel. pro")}</th>
+              <th className="px-4 py-2">{t("Tel. prive")}</th>
+              <th className="px-4 py-2">{t("Groupes")}</th>
+              <th className="px-4 py-2">{t("Acces")}</th>
+              <th className="px-4 py-2 text-right">{t("Actions")}</th>
             </tr>
           </thead>
           <tbody>
             {users.length === 0 ? (
               <tr>
                 <td colSpan={7} className="px-4 py-6 text-center text-slate-400">
-                  Aucune personne trouvee.
+                  {t("Aucune personne trouvee.")}
                 </td>
               </tr>
             ) : (
@@ -272,7 +299,7 @@ export function PersonnelManager({
                     {user.lastName} {user.firstName}
                     {!user.active ? (
                       <span className="ml-2 rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-500">
-                        inactif
+                        {t("inactif")}
                       </span>
                     ) : null}
                   </td>
@@ -301,9 +328,9 @@ export function PersonnelManager({
                         ACCOUNT_STATUS_STYLE[user.accountStatus]
                       }`}
                     >
-                  {user.accountStatus === "ACTIVE" && user.accessRole !== "NONE"
-                    ? ROLE_LABELS[user.accessRole]
-                    : ACCOUNT_STATUS_LABEL[user.accountStatus]}
+                      {user.accountStatus === "ACTIVE" && user.accessRole !== "NONE"
+                        ? t(ROLE_LABELS[user.accessRole])
+                        : t(ACCOUNT_STATUS_LABEL[user.accountStatus])}
                     </span>
                   </td>
                   <td className="px-4 py-3">
@@ -316,21 +343,26 @@ export function PersonnelManager({
                             setFormOpen(true);
                           }}
                         >
-                          Modifier
+                          {t("Modifier")}
                         </Button>
                         <form
                           action={deleteUser}
                           onSubmit={(event) => {
                             const message =
                               user.permanenceCount > 0
-                                ? `${user.firstName} ${user.lastName} possede des permanences historiques : il sera desactive. Continuer ?`
-                                : `Supprimer ${user.firstName} ${user.lastName} ?`;
+                                ? t(
+                                    "{name} possede des permanences historiques : la personne sera desactivee. Continuer ?",
+                                    { name: `${user.firstName} ${user.lastName}` },
+                                  )
+                                : t("Supprimer {name} ?", {
+                                    name: `${user.firstName} ${user.lastName}`,
+                                  });
                             if (!confirm(message)) event.preventDefault();
                           }}
                         >
                           <input type="hidden" name="id" value={user.id} />
                           <Button type="submit" variant="danger">
-                            {user.permanenceCount > 0 ? "Desactiver" : "Supprimer"}
+                            {user.permanenceCount > 0 ? t("Desactiver") : t("Supprimer")}
                           </Button>
                         </form>
                       </div>

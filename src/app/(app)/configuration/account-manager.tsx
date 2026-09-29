@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { Alert, Button, Card, Field, Input, Select } from "@/components/ui";
+import { useTranslations } from "@/components/locale-provider";
 import { ROLE_LABELS, type AccountRole } from "@/lib/roles";
 import { deleteAccount, saveAccount, type AccountActionState } from "@/server/account-actions";
 
@@ -36,60 +37,61 @@ function AccountForm({
   onClose: () => void;
 }) {
   const [state, formAction, pending] = useActionState(saveAccount, INITIAL);
+  const t = useTranslations();
 
   return (
     <form action={formAction} className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
       {account ? <input type="hidden" name="id" value={account.id} /> : null}
       <div className="grid gap-3 md:grid-cols-2">
-        <Field label="Adresse email (identifiant)" htmlFor="email">
+        <Field label={t("Adresse email (identifiant)")} htmlFor="email">
           <Input id="email" name="email" type="email" defaultValue={account?.email ?? ""} required />
         </Field>
-        <Field label="Nom affiche" htmlFor="displayName">
+        <Field label={t("Nom affiche")} htmlFor="displayName">
           <Input id="displayName" name="displayName" defaultValue={account?.displayName ?? ""} />
         </Field>
-        <Field label="Role" htmlFor="role">
+        <Field label={t("Role")} htmlFor="role">
           <Select id="role" name="role" defaultValue={account?.role ?? "USER"}>
-            <option value="USER">Utilisateur simple (lecture seule)</option>
-            <option value="MANAGER">Gestionnaire</option>
-            <option value="ADMIN">Administrateur</option>
+            <option value="USER">{t("Utilisateur simple (lecture seule)")}</option>
+            <option value="MANAGER">{t("Gestionnaire")}</option>
+            <option value="ADMIN">{t("Administrateur")}</option>
           </Select>
         </Field>
         <Field
-          label="Personne liee"
+          label={t("Personne liee")}
           htmlFor="userId"
-          hint="Optionnel : relie ce compte a une personne du planning."
+          hint={t("Optionnel : relie ce compte a une personne du planning.")}
         >
           <Select id="userId" name="userId" defaultValue={account?.userId ?? ""}>
-            <option value="">Aucune</option>
+            <option value="">{t("Aucune")}</option>
             {people.map((person) => (
               <option key={person.id} value={person.id}>{person.label}</option>
             ))}
           </Select>
         </Field>
         <Field
-          label={account ? "Nouveau mot de passe" : "Mot de passe"}
+          label={account ? t("Nouveau mot de passe") : t("Mot de passe")}
           htmlFor="password"
-          hint={account ? "Laisser vide pour conserver le mot de passe actuel." : "8 caracteres minimum."}
+          hint={account ? t("Laisser vide pour conserver le mot de passe actuel.") : t("8 caracteres minimum.")}
         >
           <Input id="password" name="password" type="password" autoComplete="new-password" />
         </Field>
-        <Field label="Etat" htmlFor="active">
+        <Field label={t("Etat")} htmlFor="active">
           <label className="flex h-[38px] items-center gap-2 text-sm text-slate-600">
             <input type="checkbox" id="active" name="active" defaultChecked={account?.active ?? true} className="h-4 w-4" />
-            Compte actif
+            {t("Compte actif")}
           </label>
         </Field>
       </div>
 
-      {state.error ? <Alert tone="error">{state.error}</Alert> : null}
-      {state.ok && state.message ? <Alert tone="success">{state.message}</Alert> : null}
+      {state.error ? <Alert tone="error">{t(state.error)}</Alert> : null}
+      {state.ok && state.message ? <Alert tone="success">{t(state.message)}</Alert> : null}
 
       <div className="flex gap-2">
         <Button type="submit" disabled={pending}>
-          {pending ? "Enregistrement..." : account ? "Mettre a jour" : "Creer le compte"}
+          {pending ? t("Enregistrement...") : account ? t("Mettre a jour") : t("Creer le compte")}
         </Button>
         <Button type="button" variant="ghost" onClick={onClose}>
-          Fermer
+          {t("Fermer")}
         </Button>
       </div>
     </form>
@@ -107,6 +109,7 @@ export function AccountManager({
 }) {
   const [editing, setEditing] = useState<AccountView | null>(null);
   const [creating, setCreating] = useState(false);
+  const t = useTranslations();
 
   return (
     <div className="flex flex-col gap-4">
@@ -121,7 +124,7 @@ export function AccountManager({
         />
       ) : (
         <div>
-          <Button onClick={() => setCreating(true)}>Nouveau compte</Button>
+          <Button onClick={() => setCreating(true)}>{t("Nouveau compte")}</Button>
         </div>
       )}
 
@@ -130,11 +133,11 @@ export function AccountManager({
           <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
             <tr>
               <th className="px-4 py-3">Email</th>
-              <th className="px-4 py-3">Nom affiche</th>
-              <th className="px-4 py-3">Role</th>
-              <th className="px-4 py-3">Personne liee</th>
-              <th className="px-4 py-3">Etat</th>
-              <th className="px-4 py-3 text-right">Actions</th>
+              <th className="px-4 py-3">{t("Nom affiche")}</th>
+              <th className="px-4 py-3">{t("Role")}</th>
+              <th className="px-4 py-3">{t("Personne liee")}</th>
+              <th className="px-4 py-3">{t("Etat")}</th>
+              <th className="px-4 py-3 text-right">{t("Actions")}</th>
             </tr>
           </thead>
           <tbody>
@@ -144,15 +147,15 @@ export function AccountManager({
                 <td className="px-4 py-3 text-slate-600">{account.displayName ?? "-"}</td>
                 <td className="px-4 py-3">
                   <span className={ROLE_BADGE[account.role]}>
-                    {ROLE_LABELS[account.role]}
+                    {t(ROLE_LABELS[account.role])}
                   </span>
                 </td>
                 <td className="px-4 py-3 text-slate-600">{account.userName ?? "-"}</td>
-                <td className="px-4 py-3 text-slate-600">{account.active ? "Actif" : "Inactif"}</td>
+                <td className="px-4 py-3 text-slate-600">{account.active ? t("Actif") : t("Inactif")}</td>
                 <td className="px-4 py-3">
                   <div className="flex justify-end gap-2">
                     <Button variant="secondary" onClick={() => setEditing(account)}>
-                      Modifier
+                      {t("Modifier")}
                     </Button>
                     {account.id === currentAccountId ? null : (
                       <form action={deleteAccount}>
@@ -161,10 +164,10 @@ export function AccountManager({
                           type="submit"
                           variant="danger"
                           onClick={(event) => {
-                            if (!window.confirm("Supprimer ce compte ?")) event.preventDefault();
+                            if (!window.confirm(t("Supprimer ce compte ?"))) event.preventDefault();
                           }}
                         >
-                          Supprimer
+                          {t("Supprimer")}
                         </Button>
                       </form>
                     )}

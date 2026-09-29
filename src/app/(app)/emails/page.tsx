@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/page-header";
+import { T } from "@/components/locale-provider";
 import { Card } from "@/components/ui";
 import { getCurrentAccount, isManagerRole } from "@/lib/auth";
 import { dateKey, toUTCDateOnly } from "@/lib/date";
@@ -62,25 +63,31 @@ export default async function EmailsPage() {
   return (
     <>
       <PageHeader
-        title="Emails / SMTP"
+        title={<T msg="Emails / SMTP" />}
         description={
-          isAdmin
-            ? "Configuration du serveur SMTP et envoi des plannings aux personnes concernees."
-            : "Envoi des plannings aux personnes concernees."
+          isAdmin ? (
+            <T msg="Configuration du serveur SMTP et envoi des plannings aux personnes concernees." />
+          ) : (
+            <T msg="Envoi des plannings aux personnes concernees." />
+          )
         }
       />
       <main className="flex flex-1 flex-col gap-6 p-6">
         {isAdmin ? (
           <Card className="p-6">
-            <h2 className="mb-4 text-base font-semibold text-slate-800">Configuration SMTP</h2>
+            <h2 className="mb-4 text-base font-semibold text-slate-800">
+              <T msg="Configuration SMTP" />
+            </h2>
             <EmailConfigForm config={config} accountEmail={account.email} />
           </Card>
         ) : null}
 
         <Card className="p-6">
-          <h2 className="mb-2 text-base font-semibold text-slate-800">Envoi manuel</h2>
+          <h2 className="mb-2 text-base font-semibold text-slate-800">
+            <T msg="Envoi manuel" />
+          </h2>
           <p className="mb-4 text-sm text-slate-500">
-            Envoie immediatement le planning complet d&apos;une semaine a toutes les personnes concernees.
+            <T msg="Envoie immediatement le planning complet d'une semaine a toutes les personnes concernees." />
           </p>
           <ManualSendForm defaultDate={today} />
         </Card>

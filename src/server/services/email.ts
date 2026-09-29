@@ -1,5 +1,15 @@
 import { decryptSecret } from "@/lib/crypto";
-import { addDays, dateKey, dayNameFrCapitalized, formatDateFr, fromDateInput, toUTCDateOnly } from "@/lib/date";
+import {
+  addDays,
+  dateKey,
+  dayNameCapitalized,
+  formatDateFr,
+  fromDateInput,
+  rangeConnector,
+  toUTCDateOnly,
+} from "@/lib/date";
+import type { Locale } from "@/lib/i18n";
+import { resolveLocale } from "@/lib/i18n";
 import { prisma } from "@/lib/db";
 import { getEnv } from "@/lib/env";
 import { htmlToPlainText, sanitizeRichText } from "@/lib/html";
@@ -69,20 +79,56 @@ function compressDays(days: (PlanningEntry | undefined)[]): DayRange[] {
   return ranges;
 }
 
-function rangeLabel(days: Date[], start: number, end: number): string {
-  const first = dayNameFrCapitalized(days[start]);
+function rangeLabel(days: Date[], start: number, end: number, locale: Locale): string {
+  const first = dayNameCapitalized(days[start], locale);
   if (start === end) return first;
-  return `${first} à ${dayNameFrCapitalized(days[end])}`;
+  return `${first} ${rangeConnector(locale)} ${dayNameCapitalized(days[end], locale)}`;
 }
+
+type EmailStrings = {
+  title: string;
+  week: (weekNumber: number, start: string, end: string) => string;
+  phoneLabel: string;
+  phoneShort: string;
+  subject: (weekNumber: number, start: string, end: string, suffix: string) => string;
+};
+
+const EMAIL_STRINGS: Record<Locale, EmailStrings> = {
+  fr: {
+    title: "Planning des permanences",
+    week: (weekNumber, start, end) => `Semaine ${weekNumber} du ${start} au ${end}`,
+    phoneLabel: "Téléphone",
+    phoneShort: "Tél.",
+    subject: (weekNumber, start, end, suffix) =>
+      `Permanence semaine ${weekNumber} du ${start} à ${end}${suffix}`,
+  },
+  en: {
+    title: "On-call schedule",
+    week: (weekNumber, start, end) => `Week ${weekNumber} from ${start} to ${end}`,
+    phoneLabel: "Phone",
+    phoneShort: "Phone",
+    subject: (weekNumber, start, end, suffix) =>
+      `On-call schedule week ${weekNumber} from ${start} to ${end}${suffix}`,
+  },
+};
 
 export function buildWeekEmail(
   snapshot: WeekSnapshot,
-  options?: { isUpdate?: boolean; introHtml?: string | null; outroHtml?: string | null },
+  options?: {
+    isUpdate?: boolean;
+    introHtml?: string | null;
+    outroHtml?: string | null;
+    locale?: Locale;
+  },
 ): BuiltEmail {
+  const locale: Locale = options?.locale ?? "fr";
+  const strings = EMAIL_STRINGS[locale];
   const start = fromDateInput(snapshot.weekStart);
   const end = fromDateInput(snapshot.weekEnd);
+  const startText = formatDateFr(start);
+  const endText = formatDateFr(end);
   const suffix = options?.isUpdate ? " (UPDATE)" : "";
-  const subject = `Permanence semaine ${snapshot.weekNumber} du ${formatDateFr(start)} à ${formatDateFr(end)}${suffix}`;
+  const subject = strings.subject(snapshot.weekNumber, startText, endText, suffix);
 
   const introHtml = options?.introHtml ? sanitizeRichText(options.introHtml) : null;
   const outroHtml = options?.outroHtml ? sanitizeRichText(options.outroHtml) : null;
@@ -104,15 +150,15 @@ export function buildWeekEmail(
     })
     .sort((a, b) => a.groupName.localeCompare(b.groupName, "fr"));
 
-  let text = `Planning des permanences\n`;
-  text += `Semaine ${snapshot.weekNumber} du ${formatDateFr(start)} au ${formatDateFr(end)}\n\n`;
+  let text = `${strings.title}\n`;
+  text += `${strings.week(snapshot.weekNumber, startText, endText)}\n\n`;
   if (introHtml) {
     text += `${htmlToPlainText(introHtml)}\n\n`;
   }
 
-  let html = `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"></head><body style="font-family:Arial,Helvetica,sans-serif;color:#0f172a;">`;
-  html += `<h1 style="font-size:18px;">Planning des permanences</h1>`;
-  html += `<p><strong>Semaine ${snapshot.weekNumber}</strong> du ${formatDateFr(start)} au ${formatDateFr(end)}</p>`;
+  let html = `<!DOCTYPE html><html lang="${locale}"><head><meta charset="utf-8"></head><body style="font-family:Arial,Helvetica,sans-serif;color:#0f172a;">`;
+  html += `<h1 style="font-size:18px;">${strings.title}</h1>`;
+  html += `<p><strong>${strings.week(snapshot.weekNumber, startText, endText)}</strong></p>`;
   if (introHtml) {
     html += `<div style="margin:16px 0;">${introHtml}</div>`;
   }
@@ -125,13 +171,13 @@ export function buildWeekEmail(
     html += `<h2 style="font-size:15px;margin-bottom:4px;">${escapeHtml(groupTitle)}</h2>`;
     html += `<table style="border-collapse:collapse;margin-bottom:12px;width:100%;">`;
     for (const range of group.ranges) {
-      const label = rangeLabel(days, range.start, range.end);
+      const label = rangeLabel(days, range.start, range.end, locale);
       const phone = range.entry.userProPhone ?? range.entry.userPrivatePhone ?? "—";
-      text += `${label} : ${range.entry.userName} — Téléphone : ${phone} — Email : ${range.entry.userEmail}\n`;
+      text += `${label} : ${range.entry.userName} — ${strings.phoneLabel} : ${phone} — Email : ${range.entry.userEmail}\n`;
       html += `<tr>`;
       html += `<td style="border:1px solid #e2e8f0;padding:6px;vertical-align:top;white-space:nowrap;">${escapeHtml(label)}</td>`;
       html += `<td style="border:1px solid #e2e8f0;padding:6px;"><strong>${escapeHtml(range.entry.userName)}</strong><br>`;
-      html += `<span style="color:#64748b;">Tél. : ${escapeHtml(phone)}</span><br>`;
+      html += `<span style="color:#64748b;">${strings.phoneShort} : ${escapeHtml(phone)}</span><br>`;
       html += `<span style="color:#64748b;">${escapeHtml(range.entry.userEmail)}</span></td>`;
       html += `</tr>`;
     }
@@ -178,13 +224,30 @@ export async function sendWeekEmail(options: {
     return { ok: false, error: "Aucune permanence pour cette semaine." };
   }
 
-  const email = buildWeekEmail(snapshot, {
-    isUpdate: options.type === "RESEND_AFTER_CHANGE",
-    introHtml: config.introHtml,
-    outroHtml: config.outroHtml,
-  });
-  if (email.recipients.length === 0) {
+  const recipients = [...new Set(snapshot.entries.map((entry) => entry.userEmail))].filter(Boolean);
+  if (recipients.length === 0) {
     return { ok: false, error: "Aucun destinataire identifié." };
+  }
+
+  const users = await prisma.user.findMany({
+    where: { email: { in: recipients } },
+    select: { email: true, locale: true },
+  });
+  const localeByEmail = new Map(users.map((user) => [user.email, resolveLocale(user.locale)]));
+  const builtByLocale = new Map<Locale, BuiltEmail>();
+  const introHtml = config.introHtml;
+  const outroHtml = config.outroHtml;
+  function emailForLocale(locale: Locale): BuiltEmail {
+    const cached = builtByLocale.get(locale);
+    if (cached) return cached;
+    const built = buildWeekEmail(snapshot, {
+      isUpdate: options.type === "RESEND_AFTER_CHANGE",
+      introHtml,
+      outroHtml,
+      locale,
+    });
+    builtByLocale.set(locale, built);
+    return built;
   }
 
   const from = formatFromAddress(config.fromAddress, config.fromName);
@@ -195,7 +258,8 @@ export async function sendWeekEmail(options: {
   const transport = createTransport(settings);
 
   try {
-    for (const recipient of email.recipients) {
+    for (const recipient of recipients) {
+      const email = emailForLocale(localeByEmail.get(recipient) ?? "fr");
       await sendMail(transport, {
         from,
         to: recipient,
@@ -225,7 +289,7 @@ export async function sendWeekEmail(options: {
         weekStart,
         weekEnd,
         type: options.type,
-        recipients: email.recipients,
+        recipients,
         ccRecipients: cc,
         status: "SUCCESS",
         contentHash,
@@ -238,7 +302,7 @@ export async function sendWeekEmail(options: {
       {
         weekYear: options.weekYear,
         weekNumber: options.weekNumber,
-        recipients: email.recipients.length,
+        recipients: recipients.length,
         type: options.type,
       },
       "email.sent",
@@ -246,7 +310,7 @@ export async function sendWeekEmail(options: {
 
     return {
       ok: true,
-      recipientCount: email.recipients.length,
+      recipientCount: recipients.length,
       weekYear: options.weekYear,
       weekNumber: options.weekNumber,
     };
@@ -259,7 +323,7 @@ export async function sendWeekEmail(options: {
         weekStart,
         weekEnd,
         type: options.type,
-        recipients: email.recipients,
+        recipients,
         ccRecipients: cc,
         status: "ERROR",
         error: message,
@@ -321,21 +385,68 @@ export function buildAccountLinkUrl(
   return `${base}${accountLinkPath(kind)}?token=${encodeURIComponent(token)}`;
 }
 
+const ACCOUNT_EMAIL_STRINGS: Record<
+  Locale,
+  {
+    subjectActivation: string;
+    subjectReset: string;
+    hello: (name: string | null) => string;
+    leadActivation: string;
+    leadReset: string;
+    ctaActivation: string;
+    ctaReset: string;
+    leadLineActivation: string;
+    leadLineReset: string;
+    copyLine: string;
+    validUntil: (expiry: string) => string;
+    footer: string;
+  }
+> = {
+  fr: {
+    subjectActivation: "Activation de votre compte Permanence",
+    subjectReset: "Reinitialisation de votre mot de passe Permanence",
+    hello: (name) => (name ? `Bonjour ${name},` : "Bonjour,"),
+    leadActivation: "Un compte a ete cree pour vous sur l'application de gestion des permanences.",
+    leadReset: "Une reinitialisation de votre mot de passe a ete demandee.",
+    ctaActivation: "Activer mon compte",
+    ctaReset: "Definir un nouveau mot de passe",
+    leadLineActivation: "Pour activer votre compte, cliquez sur ce lien :",
+    leadLineReset: "Pour reinitialiser votre mot de passe, cliquez sur ce lien :",
+    copyLine: "Ou copiez ce lien dans votre navigateur :",
+    validUntil: (expiry) => `Ce lien est valable jusqu'au ${expiry}.`,
+    footer: "Si vous n'etes pas a l'origine de cette demande, ignorez cet email.",
+  },
+  en: {
+    subjectActivation: "Activate your Permanence account",
+    subjectReset: "Reset your Permanence password",
+    hello: (name) => (name ? `Hello ${name},` : "Hello,"),
+    leadActivation: "An account has been created for you on the on-call scheduling application.",
+    leadReset: "A password reset has been requested for your account.",
+    ctaActivation: "Activate my account",
+    ctaReset: "Set a new password",
+    leadLineActivation: "To activate your account, click this link:",
+    leadLineReset: "To reset your password, click this link:",
+    copyLine: "Or copy this link into your browser:",
+    validUntil: (expiry) => `This link is valid until ${expiry}.`,
+    footer: "If you did not request this, you can ignore this email.",
+  },
+};
+
 export function buildAccountEmail(options: {
   kind: AccountEmailKind;
   name?: string | null;
   url: string;
   expiresAt: Date;
+  locale?: Locale;
 }): BuiltEmail {
+  const locale: Locale = options.locale ?? "fr";
+  const strings = ACCOUNT_EMAIL_STRINGS[locale];
   const activation = options.kind === "ACTIVATION";
-  const subject = activation
-    ? "Activation de votre compte Permanence"
-    : "Reinitialisation de votre mot de passe Permanence";
-  const greeting = options.name ? `Bonjour ${options.name},` : "Bonjour,";
-  const lead = activation
-    ? "Un compte a ete cree pour vous sur l'application de gestion des permanences."
-    : "Une reinitialisation de votre mot de passe a ete demandee.";
-  const cta = activation ? "Activer mon compte" : "Definir un nouveau mot de passe";
+  const subject = activation ? strings.subjectActivation : strings.subjectReset;
+  const greeting = strings.hello(options.name ?? null);
+  const lead = activation ? strings.leadActivation : strings.leadReset;
+  const cta = activation ? strings.ctaActivation : strings.ctaReset;
+  const leadLine = activation ? strings.leadLineActivation : strings.leadLineReset;
   const expiry = formatDateFr(toUTCDateOnly(options.expiresAt));
 
   const text = [
@@ -343,23 +454,23 @@ export function buildAccountEmail(options: {
     "",
     lead,
     "",
-    `Pour ${activation ? "activer votre compte" : "reinitialiser votre mot de passe"}, cliquez sur ce lien :`,
+    leadLine,
     options.url,
     "",
-    `Ce lien est valable jusqu'au ${expiry}.`,
+    strings.validUntil(expiry),
     "",
-    "Si vous n'etes pas a l'origine de cette demande, ignorez cet email.",
+    strings.footer,
   ].join("\n");
 
   const html = [
     "<!DOCTYPE html>",
-    '<html lang="fr"><body style="font-family:Arial,Helvetica,sans-serif;color:#0f172a;line-height:1.5">',
+    `<html lang="${locale}"><body style="font-family:Arial,Helvetica,sans-serif;color:#0f172a;line-height:1.5">`,
     `<p>${escapeHtml(greeting)}</p>`,
     `<p>${escapeHtml(lead)}</p>`,
     `<p style="margin:24px 0"><a href="${options.url}" style="background:#0f172a;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none">${escapeHtml(cta)}</a></p>`,
-    `<p>Ou copiez ce lien dans votre navigateur :<br /><a href="${options.url}">${escapeHtml(options.url)}</a></p>`,
-    `<p>Ce lien est valable jusqu'au ${expiry}.</p>`,
-    "<p>Si vous n'etes pas a l'origine de cette demande, ignorez cet email.</p>",
+    `<p>${escapeHtml(strings.copyLine)}<br /><a href="${options.url}">${escapeHtml(options.url)}</a></p>`,
+    `<p>${escapeHtml(strings.validUntil(expiry))}</p>`,
+    `<p>${escapeHtml(strings.footer)}</p>`,
     "</body></html>",
   ].join("\n");
 
@@ -372,6 +483,7 @@ export async function sendAccountEmail(options: {
   name?: string | null;
   url: string;
   expiresAt: Date;
+  locale?: Locale;
 }): Promise<AccountEmailResult> {
   const config = await getEmailConfig();
   if (!config || !config.smtpHost || !config.fromAddress) {

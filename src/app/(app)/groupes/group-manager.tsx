@@ -3,6 +3,7 @@
 import { useActionState, useCallback, useEffect, useState } from "react";
 import { Alert, Button, Card, Field, Input, Textarea } from "@/components/ui";
 import { ColorPicker } from "@/components/color-picker";
+import { useTranslations } from "@/components/locale-provider";
 import { deleteGroup, saveGroup, type ActionState } from "@/server/group-actions";
 
 export type GroupView = {
@@ -34,6 +35,7 @@ function GroupForm({
   onDone: () => void;
 }) {
   const [state, action, pending] = useActionState(saveGroup, initialState);
+  const t = useTranslations();
 
   useEffect(() => {
     if (state.ok) onDone();
@@ -42,21 +44,21 @@ function GroupForm({
   return (
     <Card className="p-4">
       <h2 className="mb-3 text-base font-semibold text-slate-800">
-        {group ? `Modifier « ${group.name} »` : "Nouveau groupe"}
+        {group ? t("Modifier {name}", { name: group.name }) : t("Nouveau groupe")}
       </h2>
       <form action={action} className="flex flex-col gap-3">
         {group ? <input type="hidden" name="id" value={group.id} /> : null}
 
         <div className="grid gap-3 md:grid-cols-2">
-          <Field label="Nom" htmlFor="name">
+          <Field label={t("Nom")} htmlFor="name">
             <Input id="name" name="name" defaultValue={group?.name ?? ""} required maxLength={100} />
           </Field>
-          <Field label="Couleur" htmlFor="color">
+          <Field label={t("Couleur")} htmlFor="color">
             <ColorPicker id="color" name="color" defaultValue={group?.color} />
           </Field>
         </div>
 
-        <Field label="Description" htmlFor="description">
+        <Field label={t("Description")} htmlFor="description">
           <Textarea
             id="description"
             name="description"
@@ -67,9 +69,9 @@ function GroupForm({
         </Field>
 
         <fieldset className="flex flex-col gap-2">
-          <legend className="text-sm font-medium text-slate-700">Membres</legend>
+          <legend className="text-sm font-medium text-slate-700">{t("Membres")}</legend>
           {users.length === 0 ? (
-            <p className="text-sm text-slate-400">Aucune personne disponible.</p>
+            <p className="text-sm text-slate-400">{t("Aucune personne disponible.")}</p>
           ) : (
             <div className="grid max-h-60 grid-cols-1 gap-1 overflow-auto rounded-md border border-slate-200 p-2 sm:grid-cols-2 lg:grid-cols-3">
               {users.map((user) => (
@@ -83,7 +85,7 @@ function GroupForm({
                   <span>
                     {user.label}
                     {!user.active ? (
-                      <span className="ml-1 text-xs text-slate-400">(inactif)</span>
+                      <span className="ml-1 text-xs text-slate-400">{t("(inactif)")}</span>
                     ) : null}
                   </span>
                 </label>
@@ -92,14 +94,14 @@ function GroupForm({
           )}
         </fieldset>
 
-        {state.error ? <Alert>{state.error}</Alert> : null}
+        {state.error ? <Alert>{t(state.error)}</Alert> : null}
 
         <div className="flex gap-2">
           <Button type="submit" disabled={pending}>
-            {pending ? "Enregistrement..." : "Enregistrer"}
+            {pending ? t("Enregistrement...") : t("Enregistrer")}
           </Button>
           <Button type="button" variant="secondary" onClick={onDone}>
-            Annuler
+            {t("Annuler")}
           </Button>
         </div>
       </form>
@@ -110,6 +112,7 @@ function GroupForm({
 export function GroupManager({ groups, users }: { groups: GroupView[]; users: UserOption[] }) {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<GroupView | null>(null);
+  const t = useTranslations();
 
   const close = useCallback(() => {
     setFormOpen(false);
@@ -125,7 +128,7 @@ export function GroupManager({ groups, users }: { groups: GroupView[]; users: Us
             setFormOpen(true);
           }}
         >
-          Nouveau groupe
+          {t("Nouveau groupe")}
         </Button>
       </div>
 
@@ -137,18 +140,18 @@ export function GroupManager({ groups, users }: { groups: GroupView[]; users: Us
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-500">
-              <th className="px-4 py-2">Groupe</th>
-              <th className="px-4 py-2">Description</th>
-              <th className="px-4 py-2">Membres</th>
-              <th className="px-4 py-2">Permanences</th>
-              <th className="px-4 py-2 text-right">Actions</th>
+              <th className="px-4 py-2">{t("Groupe")}</th>
+              <th className="px-4 py-2">{t("Description")}</th>
+              <th className="px-4 py-2">{t("Membres")}</th>
+              <th className="px-4 py-2">{t("Permanences")}</th>
+              <th className="px-4 py-2 text-right">{t("Actions")}</th>
             </tr>
           </thead>
           <tbody>
             {groups.length === 0 ? (
               <tr>
                 <td colSpan={5} className="px-4 py-6 text-center text-slate-400">
-                  Aucun groupe pour le moment.
+                  {t("Aucun groupe pour le moment.")}
                 </td>
               </tr>
             ) : (
@@ -190,12 +193,12 @@ export function GroupManager({ groups, users }: { groups: GroupView[]; users: Us
                           setFormOpen(true);
                         }}
                       >
-                        Modifier
+                        {t("Modifier")}
                       </Button>
                       <form
                         action={deleteGroup}
                         onSubmit={(event) => {
-                          if (!confirm(`Supprimer le groupe « ${group.name} » ?`)) {
+                          if (!confirm(t("Supprimer le groupe {name} ?", { name: group.name }))) {
                             event.preventDefault();
                           }
                         }}
@@ -207,11 +210,11 @@ export function GroupManager({ groups, users }: { groups: GroupView[]; users: Us
                           disabled={group.permanenceCount > 0}
                           title={
                             group.permanenceCount > 0
-                              ? "Des permanences existent pour ce groupe"
+                              ? t("Des permanences existent pour ce groupe")
                               : undefined
                           }
                         >
-                          Supprimer
+                          {t("Supprimer")}
                         </Button>
                       </form>
                     </div>
