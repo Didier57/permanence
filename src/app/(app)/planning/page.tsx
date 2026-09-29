@@ -77,8 +77,9 @@ export default async function PlanningPage({ searchParams }: PageProps<"/plannin
     };
   }
 
+  const isAdmin = account.role === "ADMIN";
   let pendingResend: { weekYear: number; weekNumber: number } | null = null;
-  if (view === "week") {
+  if (isAdmin && view === "week") {
     const info = getISOWeekInfo(anchorDate);
     const pending = await hasPendingResend(info.weekYear, info.weekNumber);
     if (pending) pendingResend = { weekYear: info.weekYear, weekNumber: info.weekNumber };
@@ -88,7 +89,7 @@ export default async function PlanningPage({ searchParams }: PageProps<"/plannin
     <PlanningView
       view={view}
       anchor={anchorRaw}
-      isAdmin={account.role === "ADMIN"}
+      isAdmin={isAdmin}
       groups={planningGroups}
       entries={entries}
       pendingResend={pendingResend}

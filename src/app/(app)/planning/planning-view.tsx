@@ -135,7 +135,7 @@ export function PlanningView({
     null,
   );
   const [resend, setResend] = useState<{ weekYear: number; weekNumber: number } | null>(
-    pendingResend,
+    isAdmin ? pendingResend : null,
   );
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
 
@@ -620,7 +620,7 @@ export function PlanningView({
         ) : null}
       </DragOverlay>
 
-      {resend ? (
+      {resend && isAdmin ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-md rounded-lg bg-white p-5 shadow-xl">
             <h2 className="mb-2 text-base font-semibold text-slate-800">
