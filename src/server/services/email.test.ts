@@ -65,14 +65,54 @@ describe("buildWeekEmail", () => {
     expect(email.recipients).toEqual(["jean@example.com", "pierre@example.com"]);
   });
 
-  it("contient l'integralite du planning (tous les jours et tous les groupes)", () => {
+  it("contient l'integralite du planning (tous les groupes)", () => {
     expect(email.text).toContain("Semaine 42 du 12/10/2026 au 18/10/2026");
     expect(email.text).toContain("Groupe : Informatique");
     expect(email.text).toContain("Groupe : Securite");
-    expect(email.text).toContain("Lundi 12/10");
-    expect(email.text).toContain("Mardi 13/10");
-    expect(email.text).toContain("Utilisateur : Jean Dupont");
-    expect(email.text).toContain("Utilisateur : Pierre Martin");
+    expect(email.text).toContain("Lundi : Jean Dupont");
+    expect(email.text).toContain("Mardi : Pierre Martin");
+  });
+
+  it("regroupe les jours consecutifs d'un meme utilisateur et ajoute des lignes pour les exceptions", () => {
+    const days = ["12", "13", "14", "15", "16", "17", "18"];
+    const weekly = buildWeekEmail({
+      weekYear: 2026,
+      weekNumber: 42,
+      weekStart: "2026-10-12",
+      weekEnd: "2026-10-18",
+      entries: days.map((day, index) =>
+        entry({
+          date: `2026-10-${day}`,
+          groupId: "g-info",
+          groupName: "Informatique",
+          ...(index < 5
+            ? { userId: "u-didier", userName: "Didier" }
+            : { userId: "u-volker", userName: "Volker" }),
+        }),
+      ),
+    });
+    expect(weekly.text).toContain("Lundi à Vendredi : Didier");
+    expect(weekly.text).toContain("Samedi à Dimanche : Volker");
+  });
+
+  it("affiche une seule ligne Lundi à Dimanche quand le meme utilisateur couvre toute la semaine", () => {
+    const days = ["12", "13", "14", "15", "16", "17", "18"];
+    const weekly = buildWeekEmail({
+      weekYear: 2026,
+      weekNumber: 42,
+      weekStart: "2026-10-12",
+      weekEnd: "2026-10-18",
+      entries: days.map((day) =>
+        entry({
+          date: `2026-10-${day}`,
+          groupId: "g-info",
+          groupName: "Informatique",
+          userId: "u-jean",
+          userName: "Jean Dupont",
+        }),
+      ),
+    });
+    expect(weekly.text.match(/Lundi à Dimanche : Jean Dupont/g)).toHaveLength(1);
   });
 
   it("affiche le telephone professionnel puis prive en secours", () => {

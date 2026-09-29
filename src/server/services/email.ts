@@ -1,5 +1,5 @@
 import { decryptSecret } from "@/lib/crypto";
-import { dateKey, dayNameFrCapitalized, formatDateFr, formatDayMonthFr, fromDateInput, toUTCDateOnly } from "@/lib/date";
+import { addDays, dateKey, dayNameFrCapitalized, formatDateFr, fromDateInput, toUTCDateOnly } from "@/lib/date";
 import { prisma } from "@/lib/db";
 import { getEnv } from "@/lib/env";
 import { logger } from "@/lib/logger";
@@ -52,6 +52,28 @@ export type BuiltEmail = {
   recipients: string[];
 };
 
+type DayRange = { start: number; end: number; entry: PlanningEntry };
+
+function compressDays(days: (PlanningEntry | undefined)[]): DayRange[] {
+  const ranges: DayRange[] = [];
+  days.forEach((entry, index) => {
+    if (!entry) return;
+    const last = ranges[ranges.length - 1];
+    if (last && last.end === index - 1 && last.entry.userId === entry.userId) {
+      last.end = index;
+      return;
+    }
+    ranges.push({ start: index, end: index, entry });
+  });
+  return ranges;
+}
+
+function rangeLabel(days: Date[], start: number, end: number): string {
+  const first = dayNameFrCapitalized(days[start]);
+  if (start === end) return first;
+  return `${first} à ${dayNameFrCapitalized(days[end])}`;
+}
+
 export function buildWeekEmail(
   snapshot: WeekSnapshot,
   options?: { isUpdate?: boolean },
@@ -61,13 +83,21 @@ export function buildWeekEmail(
   const suffix = options?.isUpdate ? " (UPDATE)" : "";
   const subject = `Permanence semaine ${snapshot.weekNumber} du ${formatDateFr(start)} à ${formatDateFr(end)}${suffix}`;
 
-  const byDate = new Map<string, PlanningEntry[]>();
-  for (const entry of snapshot.entries) {
-    const list = byDate.get(entry.date) ?? [];
-    list.push(entry);
-    byDate.set(entry.date, list);
-  }
-  const sortedDates = [...byDate.keys()].sort();
+  const weekStart = fromDateInput(snapshot.weekStart);
+  const days = Array.from({ length: 7 }, (_, index) => addDays(weekStart, index));
+  const dayKeys = days.map((day) => dateKey(day));
+
+  const groupIds = [...new Set(snapshot.entries.map((entry) => entry.groupId))];
+  const groups = groupIds
+    .map((groupId) => {
+      const entries = snapshot.entries.filter((entry) => entry.groupId === groupId);
+      const byDate = new Map(entries.map((entry) => [entry.date, entry]));
+      return {
+        groupName: entries[0]?.groupName ?? "",
+        ranges: compressDays(dayKeys.map((key) => byDate.get(key))),
+      };
+    })
+    .sort((a, b) => a.groupName.localeCompare(b.groupName, "fr"));
 
   let text = `Planning des permanences\n`;
   text += `Semaine ${snapshot.weekNumber} du ${formatDateFr(start)} au ${formatDateFr(end)}\n\n`;
@@ -76,23 +106,19 @@ export function buildWeekEmail(
   html += `<h1 style="font-size:18px;">Planning des permanences</h1>`;
   html += `<p><strong>Semaine ${snapshot.weekNumber}</strong> du ${formatDateFr(start)} au ${formatDateFr(end)}</p>`;
 
-  for (const date of sortedDates) {
-    const day = fromDateInput(date);
-    const entries = byDate.get(date) ?? [];
-    text += `${dayNameFrCapitalized(day)} ${formatDayMonthFr(day)}\n`;
-    html += `<h2 style="font-size:15px;margin-bottom:4px;">${escapeHtml(dayNameFrCapitalized(day))} ${escapeHtml(formatDayMonthFr(day))}</h2>`;
+  for (const group of groups) {
+    text += `Groupe : ${group.groupName}\n`;
+    html += `<h2 style="font-size:15px;margin-bottom:4px;">Groupe : ${escapeHtml(group.groupName)}</h2>`;
     html += `<table style="border-collapse:collapse;margin-bottom:12px;width:100%;">`;
-    for (const entry of entries) {
-      const phone = entry.userProPhone ?? entry.userPrivatePhone ?? "—";
-      text += `Groupe : ${entry.groupName}\n`;
-      text += `Utilisateur : ${entry.userName}\n`;
-      text += `Téléphone : ${phone}\n`;
-      text += `Email : ${entry.userEmail}\n\n`;
+    for (const range of group.ranges) {
+      const label = rangeLabel(days, range.start, range.end);
+      const phone = range.entry.userProPhone ?? range.entry.userPrivatePhone ?? "—";
+      text += `${label} : ${range.entry.userName} — Téléphone : ${phone} — Email : ${range.entry.userEmail}\n`;
       html += `<tr>`;
-      html += `<td style="border:1px solid #e2e8f0;padding:6px;vertical-align:top;white-space:nowrap;"><strong>${escapeHtml(entry.groupName)}</strong></td>`;
-      html += `<td style="border:1px solid #e2e8f0;padding:6px;">${escapeHtml(entry.userName)}<br>`;
+      html += `<td style="border:1px solid #e2e8f0;padding:6px;vertical-align:top;white-space:nowrap;">${escapeHtml(label)}</td>`;
+      html += `<td style="border:1px solid #e2e8f0;padding:6px;"><strong>${escapeHtml(range.entry.userName)}</strong><br>`;
       html += `<span style="color:#64748b;">Tél. : ${escapeHtml(phone)}</span><br>`;
-      html += `<span style="color:#64748b;">${escapeHtml(entry.userEmail)}</span></td>`;
+      html += `<span style="color:#64748b;">${escapeHtml(range.entry.userEmail)}</span></td>`;
       html += `</tr>`;
     }
     html += `</table>`;

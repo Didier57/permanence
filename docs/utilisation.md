@@ -82,9 +82,11 @@ Menu **Emails** :
   Le bouton **Tester la configuration SMTP** envoie un message de verification.
 - **Envoi manuel** : choisir une date pour envoyer la planification de la semaine ISO correspondante.
 
-Chaque personne concernee recoit **un seul** email contenant **l'integralite** du planning de la semaine
-(tous les jours et tous les groupes), avec pour chaque permanence le groupe, l'utilisateur, le telephone
-et l'email.
+Chaque personne concernee recoit **un seul** email contenant **l'integralite** du planning de la semaine,
+presente **par groupe** : les jours consecutifs d'une meme personne sont regroupes sur une seule ligne
+(par exemple `Lundi a Dimanche : Jean Dupont`). Une ligne supplementaire n'apparait que s'il y a une
+exception (par exemple `Lundi a Vendredi : Didier` puis `Samedi a Dimanche : Volker`). Chaque ligne
+indique aussi le telephone et l'email de la personne.
 
 ## Historique
 
