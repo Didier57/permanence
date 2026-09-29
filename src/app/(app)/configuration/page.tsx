@@ -4,6 +4,8 @@ import { Card } from "@/components/ui";
 import { getCurrentAccount } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { AccountManager, type AccountView, type PersonOption } from "./account-manager";
+import { SiteUrlForm } from "./site-url-form";
+import { getAppConfiguration, getAppUrl } from "@/server/services/app-config";
 
 export const metadata = { title: "Configuration - Permanence" };
 
@@ -13,7 +15,7 @@ export default async function ConfigurationPage() {
     redirect("/planning");
   }
 
-  const [accounts, users] = await Promise.all([
+  const [accounts, users, appConfiguration, effectiveUrl] = await Promise.all([
     prisma.account.findMany({
       orderBy: [{ role: "asc" }, { email: "asc" }],
       include: { user: { select: { firstName: true, lastName: true } } },
@@ -22,6 +24,8 @@ export default async function ConfigurationPage() {
       orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
       select: { id: true, firstName: true, lastName: true },
     }),
+    getAppConfiguration(),
+    getAppUrl(),
   ]);
 
   const accountViews: AccountView[] = accounts.map((item) => ({
@@ -46,6 +50,19 @@ export default async function ConfigurationPage() {
         description="Comptes d'acces et droits (administrateur ou utilisateur simple)."
       />
       <main className="flex flex-1 flex-col gap-6 p-6">
+        <Card className="p-6">
+          <h2 className="mb-2 text-base font-semibold text-slate-800">Adresse du site</h2>
+          <p className="mb-4 text-sm text-slate-500">
+            Adresse publique de l&apos;application, utilisee dans les liens d&apos;activation et de
+            reinitialisation envoyes par email. Si elle n&apos;est pas renseignee ici, la valeur par
+            defaut du serveur est utilisee.
+          </p>
+          <SiteUrlForm
+            configuredUrl={appConfiguration?.appUrl ?? ""}
+            effectiveUrl={effectiveUrl}
+          />
+        </Card>
+
         <Card className="p-6">
           <h2 className="mb-4 text-base font-semibold text-slate-800">Comptes et droits</h2>
           <AccountManager

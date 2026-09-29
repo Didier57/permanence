@@ -12,6 +12,7 @@ import { verifyPassword } from "@/lib/crypto";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { buildAccountLinkUrl, sendAccountEmail } from "./services/email";
+import { getAppUrl } from "./services/app-config";
 
 export type PasswordState = { ok?: boolean; error?: string; message?: string };
 
@@ -102,7 +103,7 @@ export async function requestPasswordResetAction(
   }
 
   const { token, expiresAt } = await createAccountToken(account.id, "RESET");
-  const url = buildAccountLinkUrl(token, "RESET");
+  const url = buildAccountLinkUrl(token, "RESET", await getAppUrl());
   const result = await sendAccountEmail({
     to: account.email,
     kind: "RESET",

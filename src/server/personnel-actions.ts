@@ -7,6 +7,7 @@ import { generateToken, hashPassword } from "@/lib/crypto";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { buildAccountLinkUrl, sendAccountEmail } from "./services/email";
+import { getAppUrl } from "./services/app-config";
 
 export type ActionState = { ok?: boolean; error?: string; message?: string; link?: string };
 
@@ -221,7 +222,7 @@ export async function sendAccountInvitation(
 
   const kind = account.activatedAt ? "RESET" : "ACTIVATION";
   const { token, expiresAt } = await createAccountToken(account.id, kind);
-  const url = buildAccountLinkUrl(token, kind);
+  const url = buildAccountLinkUrl(token, kind, await getAppUrl());
   const result = await sendAccountEmail({
     to: account.email,
     kind,

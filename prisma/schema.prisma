@@ -179,6 +179,15 @@ model EmailConfiguration {
   @@map("email_configuration")
 }
 
+model AppConfiguration {
+  id        String   @id @default("default")
+  appUrl    String?  @map("app_url")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("app_configuration")
+}
+
 model PlanningVersion {
   id          String   @id @default(cuid())
   weekYear    Int      @map("week_year")

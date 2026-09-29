@@ -259,8 +259,12 @@ export function accountLinkPath(kind: AccountEmailKind): string {
   return kind === "ACTIVATION" ? "/activer" : "/reinitialiser";
 }
 
-export function buildAccountLinkUrl(token: string, kind: AccountEmailKind): string {
-  const base = getEnv().APP_URL.replace(/\/+$/, "");
+export function buildAccountLinkUrl(
+  token: string,
+  kind: AccountEmailKind,
+  baseUrl?: string,
+): string {
+  const base = (baseUrl ?? getEnv().APP_URL).replace(/\/+$/, "");
   return `${base}${accountLinkPath(kind)}?token=${encodeURIComponent(token)}`;
 }
 

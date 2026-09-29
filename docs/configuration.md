@@ -19,6 +19,15 @@
 
 Aucune variable d'environnement SMTP : la configuration SMTP se fait uniquement dans l'interface (menu **Emails**).
 
+## Adresse du site
+
+Dans l'application : menu **Configuration**, carte **Adresse du site**.
+
+Cette adresse publique sert a construire les liens envoyes par email (activation de compte,
+reinitialisation de mot de passe). Si le champ est vide, la valeur de la variable `APP_URL`
+est utilisee (defaut `http://localhost:3000`). En production, renseigner l'URL reelle, par
+exemple `https://permanence.exemple.fr` (sans slash final).
+
 ## Configuration SMTP
 
 Dans l'application : menu **Emails**.
