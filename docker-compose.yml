@@ -68,7 +68,10 @@ services:
       APP_SECRET: ${APP_SECRET:?APP_SECRET est requis}
       TIMEZONE: ${TIMEZONE:-Europe/Paris}
       LOG_LEVEL: ${LOG_LEVEL:-info}
-      RUN_MIGRATIONS: "false"
+      # Le worker applique aussi les migrations (verrou Prisma : sans risque) pour
+      # qu'un envoi automatique fonctionne meme si le conteneur app n'a pas ete recree.
+      RUN_MIGRATIONS: "true"
+      RUN_SEED: "false"
     depends_on:
       db:
         condition: service_healthy

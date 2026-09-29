@@ -3,6 +3,7 @@ import cron from "node-cron";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { getEmailConfig, sendWeekEmail } from "@/server/services/email";
+import { checkDatabase, databaseLabel } from "./database";
 import { DEFAULT_CATCH_UP_MINUTES, findDueSlots, findMissedSlots } from "./schedule";
 
 export type TickResult = {
@@ -138,6 +139,7 @@ async function main(): Promise<void> {
   const once = process.argv.includes("--once") || process.env.WORKER_RUN_ONCE === "true";
 
   if (once) {
+    await checkDatabase();
     const result = await runTick(new Date(), { catchUpMinutes: DEFAULT_CATCH_UP_MINUTES });
     await recordHeartbeat(result.status);
     logger.info({ result }, "scheduler.once");
@@ -145,7 +147,8 @@ async function main(): Promise<void> {
     return;
   }
 
-  logger.info({}, "scheduler.started");
+  logger.info({ database: databaseLabel(process.env.DATABASE_URL) }, "scheduler.started");
+  await checkDatabase();
   // Controle immediat au demarrage, avec rattrapage des envois manques.
   void safeTick({ catchUpMinutes: DEFAULT_CATCH_UP_MINUTES });
   cron.schedule("* * * * *", () => {
