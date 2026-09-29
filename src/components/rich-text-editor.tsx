@@ -2,6 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
+import { sanitizeRichText } from "@/lib/html";
+
+const LINK_COLOR = "#2563eb";
 
 const FONTS = [
   { label: "Par defaut", value: "" },
@@ -72,10 +75,71 @@ export function RichTextEditor({
     exec("foreColor", next);
   }
 
+  function styleAnchors() {
+    const el = editorRef.current;
+    if (!el) return;
+    el.querySelectorAll("a").forEach((node) => {
+      const anchor = node as HTMLAnchorElement;
+      if (anchor.style.color === "") anchor.style.color = LINK_COLOR;
+      anchor.style.textDecoration = "underline";
+    });
+  }
+
   function createLink() {
-    const url = window.prompt("Adresse du lien (https://...)");
-    if (!url) return;
-    exec("createLink", url);
+    const el = editorRef.current;
+    if (!el) return;
+    const url = window.prompt("Adresse du lien (https://...)", "https://");
+    if (!url || !url.trim() || url.trim() === "https://") return;
+    const selection = window.getSelection();
+    const hasSelection =
+      selection !== null &&
+      selection.rangeCount > 0 &&
+      !selection.isCollapsed &&
+      el.contains(selection.anchorNode);
+
+    el.focus();
+    document.execCommand("styleWithCSS", false, "true");
+    if (hasSelection) {
+      document.execCommand("createLink", false, url.trim());
+    } else {
+      const anchor = document.createElement("a");
+      anchor.setAttribute("href", url.trim());
+      anchor.textContent = url.trim();
+      anchor.style.color = LINK_COLOR;
+      anchor.style.textDecoration = "underline";
+      selection?.removeAllRanges();
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      range.collapse(false);
+      range.insertNode(anchor);
+      const caret = document.createRange();
+      caret.setStartAfter(anchor);
+      caret.collapse(true);
+      selection?.addRange(caret);
+    }
+    styleAnchors();
+    sync();
+  }
+
+  function removeLink() {
+    const el = editorRef.current;
+    if (!el) return;
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return;
+    const range = selection.getRangeAt(0);
+    el.querySelectorAll("a").forEach((node) => {
+      const anchor = node as HTMLAnchorElement;
+      const touched =
+        range.intersectsNode(anchor) ||
+        anchor.contains(range.startContainer) ||
+        anchor.contains(range.endContainer);
+      if (!touched) return;
+      const parent = anchor.parentNode;
+      if (!parent) return;
+      while (anchor.firstChild) parent.insertBefore(anchor.firstChild, anchor);
+      parent.removeChild(anchor);
+    });
+    sync();
   }
 
   function switchToSource() {
@@ -183,10 +247,9 @@ export function RichTextEditor({
         <button type="button" className={TOOL_BUTTON} onClick={createLink} title="Inserer un lien">
           Lien
         </button>
-        <button type="button" className={TOOL_BUTTON} onClick={() => exec("unlink")} title="Retirer le lien">
+        <button type="button" className={TOOL_BUTTON} onClick={removeLink} title="Retirer le lien">
           Sans lien
         </button>
-
         <span className="mx-1 h-5 w-px bg-slate-300" />
 
         <button type="button" className={TOOL_BUTTON} onClick={() => exec("insertUnorderedList")} title="Liste a puces">
@@ -229,13 +292,22 @@ export function RichTextEditor({
           onBlur={sync}
           onPaste={(event) => {
             event.preventDefault();
+            const html = event.clipboardData.getData("text/html");
             const text = event.clipboardData.getData("text/plain");
-            document.execCommand("insertText", false, text);
+            const cleaned = html ? sanitizeRichText(html) : null;
+            document.execCommand("styleWithCSS", false, "true");
+            if (cleaned) {
+              document.execCommand("insertHTML", false, cleaned);
+            } else if (text) {
+              document.execCommand("insertText", false, text);
+            }
+            styleAnchors();
             sync();
           }}
           data-placeholder={placeholder}
           className={cn(
             "min-h-[140px] px-3 py-2 text-sm text-slate-900 outline-none",
+            "[&_a]:font-medium [&_a]:text-blue-600 [&_a]:underline",
             "empty:before:pointer-events-none empty:before:text-slate-400 empty:before:content-[attr(data-placeholder)]",
           )}
         />

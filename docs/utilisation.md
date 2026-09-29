@@ -90,8 +90,11 @@ Menu **Emails** :
 
   L'editeur permet de mettre en gras, italique, souligne, de changer la **police**, la **taille**, la
   **couleur du texte**, de surligner, d'inserer des **liens**, des titres, des listes et des alignements.
-  Le bouton **HTML** bascule vers le code source pour une retouche manuelle. Le contenu est nettoye
-  automatiquement (scripts et attributs dangereux supprimes). Laissez une zone vide pour ne rien ajouter.
+  Un lien insere est affiche en bleu et souligne ; sa couleur reste modifiable avec les pastilles de
+  couleur. Le collage conserve la mise en forme et les liens du texte copie (le contenu colle est nettoye
+  de la meme facon). Le bouton **HTML** bascule vers le code source pour une retouche manuelle. Le contenu
+  est nettoye automatiquement (scripts et attributs dangereux supprimes). Laissez une zone vide pour ne
+  rien ajouter.
 - **Envoi manuel** : choisir une date pour envoyer la planification de la semaine ISO correspondante.
 
 Chaque personne concernee recoit **un seul** email contenant **l'integralite** du planning de la semaine,
