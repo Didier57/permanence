@@ -83,6 +83,7 @@ export default async function PlanningPage({ searchParams }: PageProps<"/plannin
   const planningGroups: PlanningGroup[] = groups.map((group) => ({
     id: group.id,
     name: group.name,
+    description: group.description,
     color: group.color,
     members: group.members
       .filter((member) => member.user.active)

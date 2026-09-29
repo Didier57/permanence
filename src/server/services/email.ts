@@ -13,6 +13,7 @@ import { resolveLocale } from "@/lib/i18n";
 import { prisma } from "@/lib/db";
 import { getEnv } from "@/lib/env";
 import { htmlToPlainText, sanitizeRichText } from "@/lib/html";
+import { selectRecipients } from "@/lib/recipients";
 import { logger } from "@/lib/logger";
 import {
   createTransport,
@@ -201,6 +202,7 @@ export type SendResult = {
   ok: boolean;
   error?: string;
   recipientCount?: number;
+  partial?: boolean;
   weekYear?: number;
   weekNumber?: number;
 };
@@ -211,6 +213,11 @@ export async function sendWeekEmail(options: {
   type: SendType;
   accountId?: string | null;
   scheduleId?: string | null;
+  /**
+   * Sous-ensemble de destinataires (adresses email). `null`/absent = envoi a
+   * toutes les personnes concernees par la semaine.
+   */
+  recipients?: string[] | null;
 }): Promise<SendResult> {
   const config = await getEmailConfig();
   if (!config) return { ok: false, error: "Aucune configuration SMTP enregistrée." };
@@ -225,10 +232,18 @@ export async function sendWeekEmail(options: {
     return { ok: false, error: "Aucune permanence pour cette semaine." };
   }
 
-  const recipients = [...new Set(snapshot.entries.map((entry) => entry.userEmail))].filter(Boolean);
-  if (recipients.length === 0) {
+  const concerned = [
+    ...new Set(snapshot.entries.map((entry) => entry.userEmail)),
+  ].filter(Boolean);
+  if (concerned.length === 0) {
     return { ok: false, error: "Aucun destinataire identifié." };
   }
+
+  const selection = selectRecipients(concerned, options.recipients);
+  if (!selection) {
+    return { ok: false, error: "Aucun destinataire selectionne pour cet envoi." };
+  }
+  const recipients = selection.recipients;
 
   const users = await prisma.user.findMany({
     where: { email: { in: recipients } },
@@ -293,6 +308,7 @@ export async function sendWeekEmail(options: {
         recipients,
         ccRecipients: cc,
         status: "SUCCESS",
+        partial: selection.partial,
         contentHash,
         planningVersionId: version.id,
         sentByAccountId: options.accountId ?? null,
@@ -306,6 +322,7 @@ export async function sendWeekEmail(options: {
         weekNumber: options.weekNumber,
         recipients: recipients.length,
         type: options.type,
+        partial: selection.partial,
       },
       "email.sent",
     );
@@ -313,6 +330,7 @@ export async function sendWeekEmail(options: {
     return {
       ok: true,
       recipientCount: recipients.length,
+      partial: selection.partial,
       weekYear: options.weekYear,
       weekNumber: options.weekNumber,
     };
@@ -329,6 +347,7 @@ export async function sendWeekEmail(options: {
         ccRecipients: cc,
         status: "ERROR",
         error: message,
+        partial: selection.partial,
         contentHash,
         sentByAccountId: options.accountId ?? null,
         scheduleId: options.scheduleId ?? null,

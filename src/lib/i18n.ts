@@ -85,6 +85,23 @@ export const EN_MESSAGES: Record<string, string> = {
   Periode: "Period",
   Statut: "Status",
   Destinataires: "Recipients",
+  Tous: "All",
+  Envoyer: "Send",
+  Partiel: "Partial",
+  "Choisir les destinataires": "Choose recipients",
+  "{count} destinataire(s) selectionne(s).": "{count} recipient(s) selected.",
+  "Planning envoye a {count} destinataire(s).": "Schedule sent to {count} recipient(s).",
+  "Planning de la semaine {week} envoye a {count} destinataire(s).":
+    "Week {week} schedule sent to {count} recipient(s).",
+  "Envoi partiel : {count} destinataire(s). L'envoi automatique programme partira dans tous les cas.":
+    "Partial send: {count} recipient(s). The scheduled automatic send will go out anyway.",
+  "Semaine {week} ({year}). L'envoi automatique programme partira dans tous les cas.":
+    "Week {week} ({year}). The scheduled automatic send will go out anyway.",
+  "L'envoi automatique programme partira dans tous les cas pour toute la semaine.":
+    "The scheduled automatic send will go out anyway for the whole week.",
+  "Aucun destinataire selectionne pour cet envoi.": "No recipient selected for this send.",
+  "Aucun destinataire identifie.": "No recipient identified.",
+  "Destinataires invalides.": "Invalid recipients.",
 
   // Authentification
   "Gestion des permanences": "Shift management",

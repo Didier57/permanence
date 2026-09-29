@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseRecipients, uniqueEmails } from "./recipients";
+import { parseRecipients, selectRecipients, uniqueEmails } from "./recipients";
 
 describe("parseRecipients", () => {
   it("decoupe virgules, points-virgules et espaces", () => {
@@ -33,5 +33,34 @@ describe("uniqueEmails", () => {
       "a@example.com",
       "b@example.com",
     ]);
+  });
+});
+
+describe("selectRecipients", () => {
+  const concerned = ["a@example.com", "b@example.com", "c@example.com"];
+
+  it("envoie a tous quand aucune selection n'est fournie", () => {
+    expect(selectRecipients(concerned)).toEqual({ recipients: concerned, partial: false });
+    expect(selectRecipients(concerned, null)).toEqual({ recipients: concerned, partial: false });
+  });
+
+  it("restreint a la selection en ignorant la casse et les inconnus", () => {
+    expect(selectRecipients(concerned, ["B@EXAMPLE.com", "z@example.com"])).toEqual({
+      recipients: ["b@example.com"],
+      partial: true,
+    });
+  });
+
+  it("n'est pas partiel si toute la selection est couverte", () => {
+    expect(selectRecipients(concerned, ["c@example.com", "a@example.com", "b@example.com"])).toEqual({
+      recipients: concerned,
+      partial: false,
+    });
+  });
+
+  it("retourne null si la selection est vide ou inconnue", () => {
+    expect(selectRecipients(concerned, [])).toBeNull();
+    expect(selectRecipients(concerned, ["z@example.com"])).toBeNull();
+    expect(selectRecipients([], null)).toBeNull();
   });
 });

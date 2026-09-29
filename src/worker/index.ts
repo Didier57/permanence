@@ -35,6 +35,7 @@ export async function runTick(reference: Date = new Date()): Promise<TickResult>
         weekNumber: item.weekNumber,
         type: "AUTOMATIC",
         status: "SUCCESS",
+        partial: false,
         scheduleId: item.id,
       },
       select: { id: true },

@@ -74,8 +74,11 @@ export async function getWeekHash(weekYear: number, weekNumber: number): Promise
 }
 
 export async function getLastSuccessfulSend(weekYear: number, weekNumber: number) {
+  // Les envois partiels (selection de destinataires) ne comptent pas comme
+  // l'envoi de la semaine : le planning reste "a renvoyer" et l'envoi
+  // automatique programme part dans tous les cas.
   return prisma.emailHistory.findFirst({
-    where: { weekYear, weekNumber, status: "SUCCESS" },
+    where: { weekYear, weekNumber, status: "SUCCESS", partial: false },
     orderBy: { sentAt: "desc" },
     include: { planningVersion: true },
   });

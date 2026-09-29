@@ -10,6 +10,7 @@ import { sanitizeRichText } from "@/lib/html";
 import { logger } from "@/lib/logger";
 import { emailAddress as emailAddressSchema, parseRecipients } from "@/lib/recipients";
 import { sendTestEmail, sendWeekEmail } from "./services/email";
+import { getWeekSnapshot } from "./services/planning";
 
 export type EmailActionState = { ok?: boolean; error?: string; message?: string };
 
@@ -188,10 +189,63 @@ const weekSchema = z.object({
   weekNumber: z.coerce.number().int().min(1).max(53),
 });
 
+const recipientsSchema = z.array(z.string().trim().max(320)).max(500).optional();
+
+export type WeekSendResult = {
+  ok: boolean;
+  error?: string;
+  recipientCount?: number;
+  partial?: boolean;
+};
+
+export type WeekRecipient = { id: string; name: string; email: string };
+
+export type WeekRecipientsResult = {
+  ok: boolean;
+  error?: string;
+  recipients?: WeekRecipient[];
+};
+
+/** Liste des destinataires concernes par une semaine (pour le popup d'envoi). */
+export async function previewWeekRecipients(input: {
+  weekYear: number;
+  weekNumber: number;
+}): Promise<WeekRecipientsResult> {
+  try {
+    await requireManager();
+  } catch {
+    return { ok: false, error: "Acces refuse." };
+  }
+
+  const parsed = weekSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Semaine invalide." };
+
+  const snapshot = await getWeekSnapshot(parsed.data.weekYear, parsed.data.weekNumber);
+  if (snapshot.entries.length === 0) {
+    return { ok: false, error: "Aucune permanence pour cette semaine." };
+  }
+
+  const byEmail = new Map<string, WeekRecipient>();
+  for (const entry of snapshot.entries) {
+    if (!entry.userEmail || byEmail.has(entry.userEmail)) continue;
+    byEmail.set(entry.userEmail, {
+      id: entry.userId,
+      name: entry.userName,
+      email: entry.userEmail,
+    });
+  }
+  const recipients = [...byEmail.values()].sort((a, b) => a.name.localeCompare(b.name, "fr"));
+  if (recipients.length === 0) {
+    return { ok: false, error: "Aucun destinataire identifie." };
+  }
+  return { ok: true, recipients };
+}
+
 export async function sendWeekEmailNow(input: {
   weekYear: number;
   weekNumber: number;
-}): Promise<{ ok: boolean; error?: string; message?: string }> {
+  recipients?: string[] | null;
+}): Promise<WeekSendResult> {
   let account;
   try {
     account = await requireManager();
@@ -201,27 +255,28 @@ export async function sendWeekEmailNow(input: {
 
   const parsed = weekSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Semaine invalide." };
+  const recipients = recipientsSchema.safeParse(input.recipients ?? undefined);
+  if (!recipients.success) return { ok: false, error: "Destinataires invalides." };
 
   const result = await sendWeekEmail({
     weekYear: parsed.data.weekYear,
     weekNumber: parsed.data.weekNumber,
     type: "MANUAL",
     accountId: account.id,
+    recipients: recipients.data ?? null,
   });
   if (!result.ok) return { ok: false, error: result.error };
 
   revalidatePath("/historique");
   revalidatePath("/planning");
-  return {
-    ok: true,
-    message: `Planning de la semaine ${parsed.data.weekNumber} envoye a ${result.recipientCount} destinataire(s).`,
-  };
+  return { ok: true, recipientCount: result.recipientCount, partial: result.partial };
 }
 
 export async function resendWeekEmail(input: {
   weekYear: number;
   weekNumber: number;
-}): Promise<{ ok: boolean; error?: string; message?: string }> {
+  recipients?: string[] | null;
+}): Promise<WeekSendResult> {
   let account;
   try {
     account = await requireManager();
@@ -231,37 +286,39 @@ export async function resendWeekEmail(input: {
 
   const parsed = weekSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Semaine invalide." };
+  const recipients = recipientsSchema.safeParse(input.recipients ?? undefined);
+  if (!recipients.success) return { ok: false, error: "Destinataires invalides." };
 
   const result = await sendWeekEmail({
     weekYear: parsed.data.weekYear,
     weekNumber: parsed.data.weekNumber,
     type: "RESEND_AFTER_CHANGE",
     accountId: account.id,
+    recipients: recipients.data ?? null,
   });
   if (!result.ok) return { ok: false, error: result.error };
 
   revalidatePath("/historique");
   revalidatePath("/planning");
-  return {
-    ok: true,
-    message: `Planning mis a jour de la semaine ${parsed.data.weekNumber} renvoye a ${result.recipientCount} destinataire(s).`,
-  };
+  return { ok: true, recipientCount: result.recipientCount, partial: result.partial };
 }
 
-export async function sendWeekEmailForDate(
-  _prev: EmailActionState,
-  formData: FormData,
-): Promise<EmailActionState> {
+export async function sendWeekEmailForDate(input: {
+  date: string;
+  recipients?: string[] | null;
+}): Promise<WeekSendResult> {
   try {
     await requireManager();
   } catch {
-    return { error: "Acces refuse." };
+    return { ok: false, error: "Acces refuse." };
   }
 
-  const dateRaw = formData.get("date")?.toString() ?? "";
+  const dateRaw = typeof input.date === "string" ? input.date : "";
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dateRaw)) {
-    return { error: "Date invalide." };
+    return { ok: false, error: "Date invalide." };
   }
+  const recipients = recipientsSchema.safeParse(input.recipients ?? undefined);
+  if (!recipients.success) return { ok: false, error: "Destinataires invalides." };
 
   const account = await getCurrentAccount();
   const { weekYear, weekNumber } = getISOWeekInfo(fromDateInput(dateRaw));
@@ -270,13 +327,11 @@ export async function sendWeekEmailForDate(
     weekNumber,
     type: "MANUAL",
     accountId: account?.id ?? null,
+    recipients: recipients.data ?? null,
   });
-  if (!result.ok) return { error: result.error };
+  if (!result.ok) return { ok: false, error: result.error };
 
   revalidatePath("/historique");
   revalidatePath("/planning");
-  return {
-    ok: true,
-    message: `Planning de la semaine ${weekNumber} envoye a ${result.recipientCount} destinataire(s).`,
-  };
+  return { ok: true, recipientCount: result.recipientCount, partial: result.partial };
 }

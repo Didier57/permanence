@@ -15,6 +15,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { Button, Input } from "@/components/ui";
+import { RecipientPickerModal } from "@/components/recipient-picker";
 import {
   addDays,
   dateKey,
@@ -38,6 +39,7 @@ import { resendWeekEmail, sendWeekEmailNow } from "@/server/email-actions";
 export type PlanningGroup = {
   id: string;
   name: string;
+  description: string | null;
   color: string | null;
   members: { id: string; name: string }[];
 };
@@ -103,6 +105,11 @@ function DraggableUser({
   );
 }
 
+function telHref(value: string): string {
+  const cleaned = value.replace(/[^+0-9]/g, "");
+  return `tel:${cleaned}`;
+}
+
 function UserInfoModal({ user, onClose }: { user: UserInfo; onClose: () => void }) {
   const t = useTranslations();
 
@@ -129,11 +136,27 @@ function UserInfoModal({ user, onClose }: { user: UserInfo; onClose: () => void 
         <dl className="flex flex-col gap-3 text-sm">
           <div>
             <dt className="text-slate-500">{t("Telephone professionnel")}</dt>
-            <dd className="font-medium text-slate-900">{user.proPhone ?? "—"}</dd>
+            <dd className="font-medium text-slate-900">
+              {user.proPhone ? (
+                <a href={telHref(user.proPhone)} className="text-sky-600 hover:underline">
+                  {user.proPhone}
+                </a>
+              ) : (
+                "—"
+              )}
+            </dd>
           </div>
           <div>
             <dt className="text-slate-500">{t("Telephone prive")}</dt>
-            <dd className="font-medium text-slate-900">{user.privatePhone ?? "—"}</dd>
+            <dd className="font-medium text-slate-900">
+              {user.privatePhone ? (
+                <a href={telHref(user.privatePhone)} className="text-sky-600 hover:underline">
+                  {user.privatePhone}
+                </a>
+              ) : (
+                "—"
+              )}
+            </dd>
           </div>
           <div>
             <dt className="text-slate-500">Email</dt>
@@ -333,6 +356,21 @@ export function PlanningView({
   const weekStart = startOfISOWeek(anchorDate);
   const days = weekDays(weekStart);
 
+  const weekRecipients = useMemo(() => {
+    if (view !== "week") return [];
+    const found = new Map<string, { id: string; name: string; email: string }>();
+    for (const [date, byGroup] of Object.entries(entries)) {
+      const info = getISOWeekInfo(fromDateInput(date));
+      if (info.weekYear !== weekInfo.weekYear || info.weekNumber !== weekInfo.weekNumber) continue;
+      for (const entry of Object.values(byGroup)) {
+        const user = directory[entry.userId];
+        if (!user || !user.email || found.has(user.email)) continue;
+        found.set(user.email, { id: user.id, name: user.name, email: user.email });
+      }
+    }
+    return [...found.values()].sort((a, b) => a.name.localeCompare(b.name));
+  }, [view, entries, directory, weekInfo.weekYear, weekInfo.weekNumber]);
+
   const monthInfo = useMemo(() => {
     if (view !== "month") return null;
     return {
@@ -370,29 +408,44 @@ export function PlanningView({
   const showUnsentWarning = canEdit && view === "week" && pendingKeys.includes(currentWeekKey);
 
   const [sendingWeek, setSendingWeek] = useState(false);
+  const [sendOpen, setSendOpen] = useState(false);
 
-  function handleSendWeek() {
+  function openSendWeek() {
+    if (weekRecipients.length === 0) {
+      setMessage({ tone: "info", text: t("Aucune permanence pour cette semaine.") });
+      return;
+    }
+    setSendOpen(true);
+  }
+
+  function confirmSendWeek(recipients: string[]) {
     const target = { weekYear: weekInfo.weekYear, weekNumber: weekInfo.weekNumber };
-    const confirmed = window.confirm(
-      t("Envoyer par email le planning de la semaine {week} ({year}) ?", {
-        week: target.weekNumber,
-        year: target.weekYear,
-      }),
-    );
-    if (!confirmed) return;
-
+    const toEveryone = recipients.length === weekRecipients.length;
+    const payload = { ...target, recipients: toEveryone ? null : recipients };
     setSendingWeek(true);
     startTransition(async () => {
       const result = showUnsentWarning
-        ? await resendWeekEmail(target)
-        : await sendWeekEmailNow(target);
+        ? await resendWeekEmail(payload)
+        : await sendWeekEmailNow(payload);
       setSendingWeek(false);
+      setSendOpen(false);
       if (!result.ok) {
         setMessage({ tone: "error", text: t(result.error ?? "Erreur lors de l'envoi.") });
         return;
       }
-      setUnsent(null);
-      setMessage({ tone: "success", text: t(result.message ?? "Planning envoye par email.") });
+      if (!result.partial) setUnsent(null);
+      setMessage({
+        tone: "success",
+        text: result.partial
+          ? t(
+              "Envoi partiel : {count} destinataire(s). L'envoi automatique programme partira dans tous les cas.",
+              { count: result.recipientCount ?? recipients.length },
+            )
+          : t("Planning de la semaine {week} envoye a {count} destinataire(s).", {
+              week: target.weekNumber,
+              count: result.recipientCount ?? recipients.length,
+            }),
+      });
     });
   }
 
@@ -443,7 +496,7 @@ export function PlanningView({
           <div className="ml-auto flex items-center gap-3">
             {isPending ? <span className="text-xs text-slate-400">{t("Enregistrement...")}</span> : null}
             {canEdit && view === "week" ? (
-              <Button variant="secondary" onClick={handleSendWeek} disabled={sendingWeek}>
+              <Button variant="secondary" onClick={openSendWeek} disabled={sendingWeek}>
                 {sendingWeek ? t("Envoi...") : t("Envoyer la semaine par email")}
               </Button>
             ) : null}
@@ -487,6 +540,7 @@ export function PlanningView({
                           setCollapsed((prev) => ({ ...prev, [group.id]: !isCollapsed }))
                         }
                         className="flex w-full items-center justify-between px-2 py-1.5 text-left text-sm font-medium text-slate-700"
+                        title={group.description ?? undefined}
                       >
                         <span className="flex items-center gap-2">
                           <span
@@ -554,7 +608,7 @@ export function PlanningView({
                     {groups.map((group) => (
                       <tr key={group.id}>
                         <th className="border-b border-slate-100 p-2 text-left text-sm font-medium text-slate-700">
-                          <span className="flex items-center gap-2">
+                          <span className="flex items-center gap-2" title={group.description ?? undefined}>
                             <span
                               className="inline-block h-3 w-3 rounded-full"
                               style={{ backgroundColor: group.color ?? "#0ea5e9" }}
@@ -681,7 +735,10 @@ export function PlanningView({
                                           className="flex items-center justify-between gap-1 rounded border border-slate-200 border-l-4 bg-white px-1.5 py-0.5 text-[11px] text-slate-700"
                                         >
                                           <span className="truncate">
-                                            <span className="text-slate-400">
+                                            <span
+                                              className="text-slate-400"
+                                              title={group?.description ?? undefined}
+                                            >
                                               {group?.name ?? "?"} :
                                             </span>{" "}
                                             <button
@@ -725,6 +782,20 @@ export function PlanningView({
         <UserInfoModal
           user={directory[selectedUserId]}
           onClose={() => setSelectedUserId(null)}
+        />
+      ) : null}
+
+      {sendOpen ? (
+        <RecipientPickerModal
+          title={t("Choisir les destinataires")}
+          description={t(
+            "Semaine {week} ({year}). L'envoi automatique programme partira dans tous les cas.",
+            { week: weekInfo.weekNumber, year: weekInfo.weekYear },
+          )}
+          recipients={weekRecipients}
+          pending={sendingWeek}
+          onCancel={() => setSendOpen(false)}
+          onConfirm={confirmSendWeek}
         />
       ) : null}
 

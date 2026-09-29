@@ -236,6 +236,7 @@ model EmailHistory {
   ccRecipients      String[]        @default([]) @map("cc_recipients")
   status            EmailSendStatus @default(SUCCESS)
   error             String?
+  partial           Boolean         @default(false)
   contentHash       String?         @map("content_hash")
   planningVersionId String?         @map("planning_version_id")
   sentByAccountId   String?         @map("sent_by_account_id")

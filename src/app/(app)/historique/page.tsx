@@ -92,6 +92,11 @@ export default async function HistoryPage() {
                     </td>
                     <td className="px-4 py-3 text-slate-600">
                       <span className="font-medium text-slate-800">{entry.recipients.length}</span>
+                      {entry.partial ? (
+                        <span className="ml-2 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
+                          <T msg="Partiel" />
+                        </span>
+                      ) : null}
                       <ul className="mt-1 flex flex-col gap-0.5 text-xs text-slate-500">
                         {entry.recipients.map((recipient) => (
                           <li key={recipient}>{recipient}</li>
