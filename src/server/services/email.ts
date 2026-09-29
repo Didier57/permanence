@@ -1,0 +1,267 @@
+import { decryptSecret } from "@/lib/crypto";
+import { dateKey, dayNameFrCapitalized, formatDateFr, formatDayMonthFr, fromDateInput } from "@/lib/date";
+import { prisma } from "@/lib/db";
+import { logger } from "@/lib/logger";
+import {
+  createTransport,
+  formatFromAddress,
+  sendMail,
+  verifyTransport,
+  type SmtpEncryption,
+  type SmtpSettings,
+} from "@/lib/mailer";
+import { getWeekSnapshot, snapshotHash, type PlanningEntry, type WeekSnapshot } from "./planning";
+
+export type SendType = "AUTOMATIC" | "MANUAL" | "RESEND_AFTER_CHANGE";
+
+export type EmailConfigRecord = Awaited<ReturnType<typeof getEmailConfig>>;
+
+export async function getEmailConfig() {
+  return prisma.emailConfiguration.findUnique({ where: { id: "default" } });
+}
+
+export function resolveSmtpSettings(config: {
+  smtpHost: string;
+  smtpPort: number;
+  smtpEncryption: string;
+  smtpUser: string | null;
+  smtpPasswordEncrypted: string | null;
+}): SmtpSettings {
+  const encryption = (process.env.SMTP_ENCRYPTION as SmtpEncryption | undefined) ??
+    (config.smtpEncryption as SmtpEncryption);
+  return {
+    host: process.env.SMTP_HOST || config.smtpHost,
+    port: Number(process.env.SMTP_PORT || config.smtpPort),
+    encryption,
+    user: process.env.SMTP_USER ?? config.smtpUser,
+    password: process.env.SMTP_PASSWORD ?? decryptSecret(config.smtpPasswordEncrypted),
+  };
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+export type BuiltEmail = {
+  subject: string;
+  text: string;
+  html: string;
+  recipients: string[];
+};
+
+export function buildWeekEmail(snapshot: WeekSnapshot): BuiltEmail {
+  const start = fromDateInput(snapshot.weekStart);
+  const end = fromDateInput(snapshot.weekEnd);
+  const subject = `Permanence semaine ${snapshot.weekNumber} du ${formatDateFr(start)} à ${formatDateFr(end)}`;
+
+  const byDate = new Map<string, PlanningEntry[]>();
+  for (const entry of snapshot.entries) {
+    const list = byDate.get(entry.date) ?? [];
+    list.push(entry);
+    byDate.set(entry.date, list);
+  }
+  const sortedDates = [...byDate.keys()].sort();
+
+  let text = `Planning des permanences\n`;
+  text += `Semaine ${snapshot.weekNumber} du ${formatDateFr(start)} au ${formatDateFr(end)}\n\n`;
+
+  let html = `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"></head><body style="font-family:Arial,Helvetica,sans-serif;color:#0f172a;">`;
+  html += `<h1 style="font-size:18px;">Planning des permanences</h1>`;
+  html += `<p><strong>Semaine ${snapshot.weekNumber}</strong> du ${formatDateFr(start)} au ${formatDateFr(end)}</p>`;
+
+  for (const date of sortedDates) {
+    const day = fromDateInput(date);
+    const entries = byDate.get(date) ?? [];
+    text += `${dayNameFrCapitalized(day)} ${formatDayMonthFr(day)}\n`;
+    html += `<h2 style="font-size:15px;margin-bottom:4px;">${escapeHtml(dayNameFrCapitalized(day))} ${escapeHtml(formatDayMonthFr(day))}</h2>`;
+    html += `<table style="border-collapse:collapse;margin-bottom:12px;width:100%;">`;
+    for (const entry of entries) {
+      const phone = entry.userProPhone ?? entry.userPrivatePhone ?? "—";
+      text += `Groupe : ${entry.groupName}\n`;
+      text += `Utilisateur : ${entry.userName}\n`;
+      text += `Téléphone : ${phone}\n`;
+      text += `Email : ${entry.userEmail}\n\n`;
+      html += `<tr>`;
+      html += `<td style="border:1px solid #e2e8f0;padding:6px;vertical-align:top;white-space:nowrap;"><strong>${escapeHtml(entry.groupName)}</strong></td>`;
+      html += `<td style="border:1px solid #e2e8f0;padding:6px;">${escapeHtml(entry.userName)}<br>`;
+      html += `<span style="color:#64748b;">Tél. : ${escapeHtml(phone)}</span><br>`;
+      html += `<span style="color:#64748b;">${escapeHtml(entry.userEmail)}</span></td>`;
+      html += `</tr>`;
+    }
+    html += `</table>`;
+    text += `\n`;
+  }
+
+  html += `</body></html>`;
+
+  const recipients = [...new Set(snapshot.entries.map((entry) => entry.userEmail))].filter(Boolean);
+
+  return { subject, text, html, recipients };
+}
+
+export type SendResult = {
+  ok: boolean;
+  error?: string;
+  recipientCount?: number;
+  weekYear?: number;
+  weekNumber?: number;
+};
+
+export async function sendWeekEmail(options: {
+  weekYear: number;
+  weekNumber: number;
+  type: SendType;
+  accountId?: string | null;
+}): Promise<SendResult> {
+  const config = await getEmailConfig();
+  if (!config) return { ok: false, error: "Aucune configuration SMTP enregistrée." };
+
+  const settings = resolveSmtpSettings(config);
+  if (!settings.host || !settings.port || !config.fromAddress) {
+    return { ok: false, error: "Configuration SMTP incomplete." };
+  }
+
+  const snapshot = await getWeekSnapshot(options.weekYear, options.weekNumber);
+  if (snapshot.entries.length === 0) {
+    return { ok: false, error: "Aucune permanence pour cette semaine." };
+  }
+
+  const email = buildWeekEmail(snapshot);
+  if (email.recipients.length === 0) {
+    return { ok: false, error: "Aucun destinataire identifié." };
+  }
+
+  const from = formatFromAddress(
+    process.env.SMTP_FROM || config.fromAddress,
+    config.fromName,
+  );
+  const cc = config.ccRecipients.filter(Boolean);
+  const weekStart = fromDateInput(snapshot.weekStart);
+  const weekEnd = fromDateInput(snapshot.weekEnd);
+  const contentHash = snapshotHash(snapshot);
+  const transport = createTransport(settings);
+
+  try {
+    for (const recipient of email.recipients) {
+      await sendMail(transport, {
+        from,
+        to: recipient,
+        cc,
+        replyTo: config.replyTo ?? undefined,
+        subject: email.subject,
+        text: email.text,
+        html: email.html,
+      });
+    }
+
+    const version = await prisma.planningVersion.create({
+      data: {
+        weekYear: options.weekYear,
+        weekNumber: options.weekNumber,
+        weekStart,
+        weekEnd,
+        snapshot: snapshot as unknown as object,
+        contentHash,
+      },
+    });
+
+    await prisma.emailHistory.create({
+      data: {
+        weekYear: options.weekYear,
+        weekNumber: options.weekNumber,
+        weekStart,
+        weekEnd,
+        type: options.type,
+        recipients: email.recipients,
+        ccRecipients: cc,
+        status: "SUCCESS",
+        contentHash,
+        planningVersionId: version.id,
+        sentByAccountId: options.accountId ?? null,
+      },
+    });
+
+    logger.info(
+      {
+        weekYear: options.weekYear,
+        weekNumber: options.weekNumber,
+        recipients: email.recipients.length,
+        type: options.type,
+      },
+      "email.sent",
+    );
+
+    return {
+      ok: true,
+      recipientCount: email.recipients.length,
+      weekYear: options.weekYear,
+      weekNumber: options.weekNumber,
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    await prisma.emailHistory.create({
+      data: {
+        weekYear: options.weekYear,
+        weekNumber: options.weekNumber,
+        weekStart,
+        weekEnd,
+        type: options.type,
+        recipients: email.recipients,
+        ccRecipients: cc,
+        status: "ERROR",
+        error: message,
+        contentHash,
+        sentByAccountId: options.accountId ?? null,
+      },
+    });
+    logger.error({ err: error, weekYear: options.weekYear, weekNumber: options.weekNumber }, "email.send.error");
+    return { ok: false, error: `Echec de l'envoi : ${message}` };
+  } finally {
+    transport.close();
+  }
+}
+
+export async function sendTestEmail(to: string): Promise<{ ok: boolean; error?: string }> {
+  const config = await getEmailConfig();
+  if (!config) return { ok: false, error: "Aucune configuration SMTP enregistrée." };
+
+  const settings = resolveSmtpSettings(config);
+  const transport = createTransport(settings);
+  try {
+    await verifyTransport(transport);
+    await sendMail(transport, {
+      from: formatFromAddress(process.env.SMTP_FROM || config.fromAddress, config.fromName),
+      to,
+      replyTo: config.replyTo ?? undefined,
+      subject: "Test de configuration SMTP - Permanence",
+      text: "Ce message confirme que la configuration SMTP de l'application Permanence est fonctionnelle.",
+      html: "<p>Ce message confirme que la configuration SMTP de l'application <strong>Permanence</strong> est fonctionnelle.</p>",
+    });
+    logger.info({ to }, "email.test.success");
+    return { ok: true };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    logger.error({ err: error }, "email.test.error");
+    return { ok: false, error: `Echec du test : ${message}` };
+  } finally {
+    transport.close();
+  }
+}
+
+export async function getNextWeekReference(reference: Date, timezone: string): Promise<{ weekYear: number; weekNumber: number }> {
+  void timezone;
+  const { getISOWeekInfo, addDays } = await import("@/lib/date");
+  return getISOWeekInfo(addDays(reference, 7));
+}
+
+export function currentWeekKey(weekYear: number, weekNumber: number): string {
+  return `${weekYear}-${weekNumber}`;
+}
+
+export function entryDateKey(entry: PlanningEntry): string {
+  return dateKey(fromDateInput(entry.date));
+}

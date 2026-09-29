@@ -1,0 +1,91 @@
+name: permanence
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-permanence}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-permanence}
+      POSTGRES_DB: ${POSTGRES_DB:-permanence}
+      TZ: ${TIMEZONE:-Europe/Paris}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-permanence} -d ${POSTGRES_DB:-permanence}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  app:
+    image: ghcr.io/didier57/permanence:latest
+    build:
+      context: .
+      target: runner
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-permanence}:${POSTGRES_PASSWORD:-permanence}@db:5432/${POSTGRES_DB:-permanence}?schema=public
+      APP_SECRET: ${APP_SECRET:?APP_SECRET est requis}
+      TIMEZONE: ${TIMEZONE:-Europe/Paris}
+      NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: ${NEXT_SERVER_ACTIONS_ENCRYPTION_KEY:?NEXT_SERVER_ACTIONS_ENCRYPTION_KEY est requis}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@example.com}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      RUN_MIGRATIONS: "true"
+      RUN_SEED: "true"
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      SMTP_ENCRYPTION: ${SMTP_ENCRYPTION:-}
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/login').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  worker:
+    image: ghcr.io/didier57/permanence:latest
+    build:
+      context: .
+      target: runner
+    restart: unless-stopped
+    command: ["node_modules/.bin/tsx", "src/worker/index.ts"]
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-permanence}:${POSTGRES_PASSWORD:-permanence}@db:5432/${POSTGRES_DB:-permanence}?schema=public
+      APP_SECRET: ${APP_SECRET:?APP_SECRET est requis}
+      TIMEZONE: ${TIMEZONE:-Europe/Paris}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      RUN_MIGRATIONS: "false"
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      SMTP_ENCRYPTION: ${SMTP_ENCRYPTION:-}
+    depends_on:
+      db:
+        condition: service_healthy
+      app:
+        condition: service_healthy
+
+volumes:
+  db_data:

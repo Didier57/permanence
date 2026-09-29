@@ -1,0 +1,226 @@
+"use client";
+
+import { useActionState, useCallback, useEffect, useState } from "react";
+import { Alert, Button, Card, Field, Input, Textarea } from "@/components/ui";
+import { deleteGroup, saveGroup, type ActionState } from "@/server/group-actions";
+
+export type GroupView = {
+  id: string;
+  name: string;
+  description: string | null;
+  color: string | null;
+  permanenceCount: number;
+  memberIds: string[];
+  members: { id: string; label: string }[];
+};
+
+export type UserOption = {
+  id: string;
+  label: string;
+  email: string;
+  active: boolean;
+};
+
+const initialState: ActionState = {};
+
+function GroupForm({
+  group,
+  users,
+  onDone,
+}: {
+  group: GroupView | null;
+  users: UserOption[];
+  onDone: () => void;
+}) {
+  const [state, action, pending] = useActionState(saveGroup, initialState);
+
+  useEffect(() => {
+    if (state.ok) onDone();
+  }, [state, onDone]);
+
+  return (
+    <Card className="p-4">
+      <h2 className="mb-3 text-base font-semibold text-slate-800">
+        {group ? `Modifier « ${group.name} »` : "Nouveau groupe"}
+      </h2>
+      <form action={action} className="flex flex-col gap-3">
+        {group ? <input type="hidden" name="id" value={group.id} /> : null}
+
+        <div className="grid gap-3 md:grid-cols-2">
+          <Field label="Nom" htmlFor="name">
+            <Input id="name" name="name" defaultValue={group?.name ?? ""} required maxLength={100} />
+          </Field>
+          <Field label="Couleur" htmlFor="color">
+            <Input id="color" name="color" defaultValue={group?.color ?? "#3b82f6"} />
+          </Field>
+        </div>
+
+        <Field label="Description" htmlFor="description">
+          <Textarea
+            id="description"
+            name="description"
+            rows={2}
+            defaultValue={group?.description ?? ""}
+            maxLength={500}
+          />
+        </Field>
+
+        <fieldset className="flex flex-col gap-2">
+          <legend className="text-sm font-medium text-slate-700">Membres</legend>
+          {users.length === 0 ? (
+            <p className="text-sm text-slate-400">Aucune personne disponible.</p>
+          ) : (
+            <div className="grid max-h-60 grid-cols-1 gap-1 overflow-auto rounded-md border border-slate-200 p-2 sm:grid-cols-2 lg:grid-cols-3">
+              {users.map((user) => (
+                <label key={user.id} className="flex items-center gap-2 text-sm text-slate-700">
+                  <input
+                    type="checkbox"
+                    name="memberIds"
+                    value={user.id}
+                    defaultChecked={group?.memberIds.includes(user.id) ?? false}
+                  />
+                  <span>
+                    {user.label}
+                    {!user.active ? (
+                      <span className="ml-1 text-xs text-slate-400">(inactif)</span>
+                    ) : null}
+                  </span>
+                </label>
+              ))}
+            </div>
+          )}
+        </fieldset>
+
+        {state.error ? <Alert>{state.error}</Alert> : null}
+
+        <div className="flex gap-2">
+          <Button type="submit" disabled={pending}>
+            {pending ? "Enregistrement..." : "Enregistrer"}
+          </Button>
+          <Button type="button" variant="secondary" onClick={onDone}>
+            Annuler
+          </Button>
+        </div>
+      </form>
+    </Card>
+  );
+}
+
+export function GroupManager({ groups, users }: { groups: GroupView[]; users: UserOption[] }) {
+  const [formOpen, setFormOpen] = useState(false);
+  const [editing, setEditing] = useState<GroupView | null>(null);
+
+  const close = useCallback(() => {
+    setFormOpen(false);
+    setEditing(null);
+  }, []);
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex justify-end">
+        <Button
+          onClick={() => {
+            setEditing(null);
+            setFormOpen(true);
+          }}
+        >
+          Nouveau groupe
+        </Button>
+      </div>
+
+      {formOpen ? (
+        <GroupForm key={editing?.id ?? "new"} group={editing} users={users} onDone={close} />
+      ) : null}
+
+      <Card>
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-500">
+              <th className="px-4 py-2">Groupe</th>
+              <th className="px-4 py-2">Description</th>
+              <th className="px-4 py-2">Membres</th>
+              <th className="px-4 py-2">Permanences</th>
+              <th className="px-4 py-2 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {groups.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="px-4 py-6 text-center text-slate-400">
+                  Aucun groupe pour le moment.
+                </td>
+              </tr>
+            ) : (
+              groups.map((group) => (
+                <tr key={group.id} className="border-b border-slate-100 align-top">
+                  <td className="px-4 py-3 font-medium text-slate-800">
+                    <span className="flex items-center gap-2">
+                      <span
+                        className="inline-block h-3 w-3 rounded-full border border-slate-300"
+                        style={{ backgroundColor: group.color ?? "#cbd5e1" }}
+                      />
+                      {group.name}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-slate-500">{group.description ?? "—"}</td>
+                  <td className="px-4 py-3">
+                    {group.members.length === 0 ? (
+                      <span className="text-slate-400">—</span>
+                    ) : (
+                      <span className="flex flex-wrap gap-1">
+                        {group.members.map((member) => (
+                          <span
+                            key={member.id}
+                            className="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-600"
+                          >
+                            {member.label}
+                          </span>
+                        ))}
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-slate-500">{group.permanenceCount}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        variant="secondary"
+                        onClick={() => {
+                          setEditing(group);
+                          setFormOpen(true);
+                        }}
+                      >
+                        Modifier
+                      </Button>
+                      <form
+                        action={deleteGroup}
+                        onSubmit={(event) => {
+                          if (!confirm(`Supprimer le groupe « ${group.name} » ?`)) {
+                            event.preventDefault();
+                          }
+                        }}
+                      >
+                        <input type="hidden" name="id" value={group.id} />
+                        <Button
+                          type="submit"
+                          variant="danger"
+                          disabled={group.permanenceCount > 0}
+                          title={
+                            group.permanenceCount > 0
+                              ? "Des permanences existent pour ce groupe"
+                              : undefined
+                          }
+                        >
+                          Supprimer
+                        </Button>
+                      </form>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </Card>
+    </div>
+  );
+}

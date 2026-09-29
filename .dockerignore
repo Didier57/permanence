@@ -1,0 +1,17 @@
+node_modules
+.next
+out
+build
+coverage
+.git
+.gitignore
+.github
+.env
+.env.*
+!.env.example
+src/generated
+*.md
+*.log
+.DS_Store
+tsconfig.tsbuildinfo
+next-env.d.ts

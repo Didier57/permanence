@@ -1,0 +1,82 @@
+import { redirect } from "next/navigation";
+import { PageHeader } from "@/components/page-header";
+import { Card } from "@/components/ui";
+import { getCurrentAccount } from "@/lib/auth";
+import { prisma } from "@/lib/db";
+import { AccountManager, type AccountView, type PersonOption } from "./account-manager";
+
+export const metadata = { title: "Configuration - Permanence" };
+
+export default async function ConfigurationPage() {
+  const account = await getCurrentAccount();
+  if (!account || account.role !== "ADMIN") {
+    redirect("/planning");
+  }
+
+  const [accounts, users] = await Promise.all([
+    prisma.account.findMany({
+      orderBy: [{ role: "asc" }, { email: "asc" }],
+      include: { user: { select: { firstName: true, lastName: true } } },
+    }),
+    prisma.user.findMany({
+      orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
+      select: { id: true, firstName: true, lastName: true },
+    }),
+  ]);
+
+  const accountViews: AccountView[] = accounts.map((item) => ({
+    id: item.id,
+    email: item.email,
+    displayName: item.displayName,
+    role: item.role,
+    active: item.active,
+    userId: item.userId,
+    userName: item.user ? `${item.user.firstName} ${item.user.lastName}` : null,
+  }));
+
+  const people: PersonOption[] = users.map((user) => ({
+    id: user.id,
+    label: `${user.lastName} ${user.firstName}`,
+  }));
+
+  return (
+    <>
+      <PageHeader
+        title="Configuration"
+        description="Comptes d'acces et droits (administrateur ou utilisateur simple)."
+      />
+      <main className="flex flex-1 flex-col gap-6 p-6">
+        <Card className="p-6">
+          <h2 className="mb-4 text-base font-semibold text-slate-800">Comptes et droits</h2>
+          <AccountManager
+            accounts={accountViews}
+            people={people}
+            currentAccountId={account.id}
+          />
+        </Card>
+
+        <Card className="p-6">
+          <h2 className="mb-2 text-base font-semibold text-slate-800">Informations</h2>
+          <dl className="grid gap-2 text-sm text-slate-600 md:grid-cols-2">
+            <div>
+              <dt className="font-medium text-slate-700">Numeros de semaine</dt>
+              <dd>Norme ISO 8601, lundi comme premier jour.</dd>
+            </div>
+            <div>
+              <dt className="font-medium text-slate-700">Fuseau horaire d&apos;envoi</dt>
+              <dd>Configure dans le module Emails / SMTP.</dd>
+            </div>
+            <div>
+              <dt className="font-medium text-slate-700">Administrateur</dt>
+              <dd>Acces complet (planning, personnel, groupes, emails, comptes).</dd>
+            </div>
+            <div>
+              <dt className="font-medium text-slate-700">Utilisateur simple</dt>
+              <dd>Consultation du planning uniquement.</dd>
+            </div>
+          </dl>
+        </Card>
+      </main>
+    </>
+  );
+}
