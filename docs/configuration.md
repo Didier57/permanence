@@ -11,6 +11,7 @@
 | `LOG_LEVEL` | non | Niveau de log pino (defaut `info`, `silent` en test). |
 | `ADMIN_EMAIL` | non | Email du compte admin cree au premier demarrage. |
 | `ADMIN_PASSWORD` | non | Mot de passe du compte admin cree au premier demarrage. |
+| `ADMIN_SYNC_PASSWORD` | non | `true` (defaut) : au demarrage, re-aligne le mot de passe de ce compte sur `ADMIN_PASSWORD` s'il differe. `false` pour desactiver. |
 | `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | non | Identifiants de la base dans `docker-compose.yml`. |
 | `APP_PORT` | non | Port HTTP expose (defaut `3000`). |
 | `RUN_MIGRATIONS`, `RUN_SEED` | non | Controle l'application des migrations et du seed par l'entrypoint (`true` pour `app`). |

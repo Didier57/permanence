@@ -64,6 +64,35 @@ npm run worker        # boucle chaque minute
 npm run worker:once   # un seul cycle (utile pour tester)
 ```
 
+## Depannage : "Identifiants invalides" a la connexion
+
+Le compte administrateur est cree au premier demarrage par le seed, a partir de
+`ADMIN_EMAIL` / `ADMIN_PASSWORD`. Si la connexion echoue :
+
+1. Verifier que le seed s'est bien execute :
+
+   ```bash
+   docker compose logs app | grep -i "compte admin"
+   ```
+
+2. Si la base a ete creee avec d'anciennes valeurs, re-executer le seed (il
+   re-aligne le mot de passe admin sur `ADMIN_PASSWORD`, sauf si
+   `ADMIN_SYNC_PASSWORD=false`) :
+
+   ```bash
+   docker compose exec app node_modules/.bin/prisma db seed
+   ```
+
+3. Pour repartir d'une base vierge (donnees supprimees) :
+
+   ```bash
+   docker compose down -v
+   docker compose up -d
+   ```
+
+> Dans un fichier `.env`, un mot de passe contenant `$` doit etre ecrit `$$`
+> (Docker Compose interprete `$` comme une variable dans le `docker-compose.yml`).
+
 ## Sans Docker : base PostgreSQL locale
 
 Definir `DATABASE_URL` vers une base PostgreSQL accessible, puis executer
