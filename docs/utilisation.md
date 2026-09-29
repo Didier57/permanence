@@ -65,17 +65,14 @@ Toute personne affichee peut etre **glissee-deposee**.
 
 ### Renvoi apres modification
 
-Lorsqu'un planning deja envoye est modifie, l'application affiche
-« Le planning a deja ete envoye. Renvoyer le planning mis a jour ? » et laisse
-l'administrateur decider du renvoi. Plusieurs modifications successives n'entrainent qu'**un seul**
-nouvel envoi complet.
+Lorsqu'un planning deja envoye est modifie, aucune fenetre ne s'ouvre : un avertissement rouge
+**« La modification de la semaine en cours n'a pas ete envoyee. »** s'affiche a l'extremite gauche
+de la barre d'outils de la vue Semaine.
 
-La question n'est posee **qu'une seule fois** par visite : ensuite, un avertissement rouge
-s'affiche dans la barre d'outils, a gauche du bouton **Envoyer la semaine par email**, pour
-indiquer que la modification de la semaine affichee n'a pas encore ete envoyee.
-
-Le renvoi apres modification porte la mention **`(UPDATE)`** dans l'objet du mail, par exemple :
-`Permanence semaine 42 du 12/10/2026 à 18/10/2026 (UPDATE)`.
+Pour renvoyer le planning mis a jour, l'administrateur clique sur **Envoyer la semaine par email** :
+l'envoi porte alors la mention **`(UPDATE)`** dans l'objet, par exemple
+`Permanence semaine 42 du 12/10/2026 à 18/10/2026 (UPDATE)`, et l'avertissement disparait.
+Plusieurs modifications successives n'entrainent qu'**un seul** nouvel envoi complet.
 
 ## Emails
 

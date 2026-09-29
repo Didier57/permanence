@@ -134,21 +134,10 @@ export function PlanningView({
   const [message, setMessage] = useState<{ tone: "error" | "success" | "info"; text: string } | null>(
     null,
   );
-  const [resend, setResend] = useState<{ weekYear: number; weekNumber: number } | null>(
-    isAdmin ? pendingResend : null,
-  );
-  const [askedOnce, setAskedOnce] = useState(isAdmin && pendingResend !== null);
   const [unsent, setUnsent] = useState<{ weekYear: number; weekNumber: number } | null>(
     isAdmin && pendingResend ? pendingResend : null,
   );
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
-
-  function proposeResend(weekYear: number, weekNumber: number) {
-    setUnsent({ weekYear, weekNumber });
-    if (askedOnce) return;
-    setAskedOnce(true);
-    setResend({ weekYear, weekNumber });
-  }
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
   const anchorDate = useMemo(() => fromDateInput(anchor), [anchor]);
@@ -201,7 +190,7 @@ export function PlanningView({
           text: result.replaced ? "Permanence remplacee." : "Permanence enregistree.",
         });
         if (result.needsResend && result.weekYear && result.weekNumber) {
-          proposeResend(result.weekYear, result.weekNumber);
+          setUnsent({ weekYear: result.weekYear, weekNumber: result.weekNumber });
         }
         return;
       }
@@ -235,7 +224,7 @@ export function PlanningView({
         text: `Semaine ${target.weekNumber} remplie pour ${payload.userName}.`,
       });
       if (result.needsResend && result.weekYear && result.weekNumber) {
-        proposeResend(result.weekYear, result.weekNumber);
+        setUnsent({ weekYear: result.weekYear, weekNumber: result.weekNumber });
       }
     });
   }
@@ -250,23 +239,8 @@ export function PlanningView({
       }
       setMessage({ tone: "success", text: "Permanence supprimee." });
       if (result.needsResend && result.weekYear && result.weekNumber) {
-        proposeResend(result.weekYear, result.weekNumber);
+        setUnsent({ weekYear: result.weekYear, weekNumber: result.weekNumber });
       }
-    });
-  }
-
-  function handleResend() {
-    if (!resend) return;
-    const target = resend;
-    startTransition(async () => {
-      const result = await resendWeekEmail(target);
-      setResend(null);
-      if (!result.ok) {
-        setMessage({ tone: "error", text: result.error ?? "Erreur." });
-        return;
-      }
-      setUnsent(null);
-      setMessage({ tone: "success", text: result.message ?? "Planning renvoye." });
     });
   }
 
@@ -317,12 +291,15 @@ export function PlanningView({
 
     setSendingWeek(true);
     startTransition(async () => {
-      const result = await sendWeekEmailNow(target);
+      const result = showUnsentWarning
+        ? await resendWeekEmail(target)
+        : await sendWeekEmailNow(target);
       setSendingWeek(false);
       if (!result.ok) {
         setMessage({ tone: "error", text: result.error ?? "Erreur lors de l'envoi." });
         return;
       }
+      setUnsent(null);
       setMessage({ tone: "success", text: result.message ?? "Planning envoye par email." });
     });
   }
@@ -331,6 +308,11 @@ export function PlanningView({
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <div className="flex flex-1 flex-col gap-4 p-4">
         <div className="flex flex-wrap items-center gap-3 rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+          {showUnsentWarning ? (
+            <span className="text-base font-bold text-red-600">
+              La modification de la semaine en cours n&apos;a pas été envoyée.
+            </span>
+          ) : null}
           <div className="flex overflow-hidden rounded-md border border-slate-300">
             <button
               type="button"
@@ -368,11 +350,6 @@ export function PlanningView({
           />
           <div className="ml-auto flex items-center gap-3">
             {isPending ? <span className="text-xs text-slate-400">Enregistrement...</span> : null}
-            {showUnsentWarning ? (
-              <span className="max-w-[280px] text-right text-xs font-medium text-red-600">
-                La modification de la semaine en cours n&apos;a pas été envoyée.
-              </span>
-            ) : null}
             {isAdmin && view === "week" ? (
               <Button variant="secondary" onClick={handleSendWeek} disabled={sendingWeek}>
                 {sendingWeek ? "Envoi..." : "Envoyer la semaine par email"}
@@ -642,28 +619,6 @@ export function PlanningView({
           </div>
         ) : null}
       </DragOverlay>
-
-      {resend && isAdmin ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-md rounded-lg bg-white p-5 shadow-xl">
-            <h2 className="mb-2 text-base font-semibold text-slate-800">
-              Le planning a deja ete envoye
-            </h2>
-            <p className="mb-4 text-sm text-slate-600">
-              Le planning de la semaine {resend.weekNumber} a ete modifie apres l&apos;envoi.
-              Renvoyer le planning mis a jour a toutes les personnes concernees ?
-            </p>
-            <div className="flex justify-end gap-2">
-              <Button variant="secondary" onClick={() => setResend(null)}>
-                Non, plus tard
-              </Button>
-              <Button onClick={handleResend} disabled={isPending}>
-                Oui, renvoyer
-              </Button>
-            </div>
-          </div>
-        </div>
-      ) : null}
     </DndContext>
   );
 }
