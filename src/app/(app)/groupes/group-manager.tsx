@@ -2,6 +2,7 @@
 
 import { useActionState, useCallback, useEffect, useState } from "react";
 import { Alert, Button, Card, Field, Input, Textarea } from "@/components/ui";
+import { ColorPicker } from "@/components/color-picker";
 import { deleteGroup, saveGroup, type ActionState } from "@/server/group-actions";
 
 export type GroupView = {
@@ -51,7 +52,7 @@ function GroupForm({
             <Input id="name" name="name" defaultValue={group?.name ?? ""} required maxLength={100} />
           </Field>
           <Field label="Couleur" htmlFor="color">
-            <Input id="color" name="color" defaultValue={group?.color ?? "#3b82f6"} />
+            <ColorPicker id="color" name="color" defaultValue={group?.color} />
           </Field>
         </div>
 

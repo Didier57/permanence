@@ -46,7 +46,8 @@ afin de conserver l'historique.
 ## Groupes
 
 Menu **Groupes** : creer, modifier et supprimer des groupes (nom, description, couleur, membres).
-Un groupe ayant des permanences ne peut pas etre supprime.
+La couleur se choisit avec un **selecteur de couleur** (nuancier predefini ou couleur libre) et sert de
+repere dans le planning. Un groupe ayant des permanences ne peut pas etre supprime.
 
 ## Planning
 
