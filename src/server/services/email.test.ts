@@ -56,6 +56,11 @@ describe("buildWeekEmail", () => {
     expect(email.subject).toBe("Permanence semaine 42 du 12/10/2026 à 18/10/2026");
   });
 
+  it("ajoute (UPDATE) au sujet lorsqu'il s'agit d'un renvoi apres modification", () => {
+    const updated = buildWeekEmail(snapshot, { isUpdate: true });
+    expect(updated.subject).toBe("Permanence semaine 42 du 12/10/2026 à 18/10/2026 (UPDATE)");
+  });
+
   it("deduplique les destinataires (un utilisateur = un seul email)", () => {
     expect(email.recipients).toEqual(["jean@example.com", "pierre@example.com"]);
   });

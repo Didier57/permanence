@@ -137,7 +137,18 @@ export function PlanningView({
   const [resend, setResend] = useState<{ weekYear: number; weekNumber: number } | null>(
     isAdmin ? pendingResend : null,
   );
+  const [askedOnce, setAskedOnce] = useState(isAdmin && pendingResend !== null);
+  const [unsent, setUnsent] = useState<{ weekYear: number; weekNumber: number } | null>(
+    isAdmin && pendingResend ? pendingResend : null,
+  );
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+
+  function proposeResend(weekYear: number, weekNumber: number) {
+    setUnsent({ weekYear, weekNumber });
+    if (askedOnce) return;
+    setAskedOnce(true);
+    setResend({ weekYear, weekNumber });
+  }
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
   const anchorDate = useMemo(() => fromDateInput(anchor), [anchor]);
@@ -190,7 +201,7 @@ export function PlanningView({
           text: result.replaced ? "Permanence remplacee." : "Permanence enregistree.",
         });
         if (result.needsResend && result.weekYear && result.weekNumber) {
-          setResend({ weekYear: result.weekYear, weekNumber: result.weekNumber });
+          proposeResend(result.weekYear, result.weekNumber);
         }
         return;
       }
@@ -224,7 +235,7 @@ export function PlanningView({
         text: `Semaine ${target.weekNumber} remplie pour ${payload.userName}.`,
       });
       if (result.needsResend && result.weekYear && result.weekNumber) {
-        setResend({ weekYear: result.weekYear, weekNumber: result.weekNumber });
+        proposeResend(result.weekYear, result.weekNumber);
       }
     });
   }
@@ -239,7 +250,7 @@ export function PlanningView({
       }
       setMessage({ tone: "success", text: "Permanence supprimee." });
       if (result.needsResend && result.weekYear && result.weekNumber) {
-        setResend({ weekYear: result.weekYear, weekNumber: result.weekNumber });
+        proposeResend(result.weekYear, result.weekNumber);
       }
     });
   }
@@ -254,6 +265,7 @@ export function PlanningView({
         setMessage({ tone: "error", text: result.error ?? "Erreur." });
         return;
       }
+      setUnsent(null);
       setMessage({ tone: "success", text: result.message ?? "Planning renvoye." });
     });
   }
@@ -287,6 +299,12 @@ export function PlanningView({
     view === "week"
       ? `Semaine ${weekInfo.weekNumber} / ${weekInfo.weekYear} - ${formatWeekRangeFr(weekStart, days[6])}`
       : `${monthNameFr(anchorDate.getUTCMonth())} ${anchorDate.getUTCFullYear()}`;
+
+  const currentWeekKey = `${weekInfo.weekYear}-${weekInfo.weekNumber}`;
+  const pendingKeys = [unsent, pendingResend]
+    .filter((item): item is { weekYear: number; weekNumber: number } => item !== null)
+    .map((item) => `${item.weekYear}-${item.weekNumber}`);
+  const showUnsentWarning = isAdmin && view === "week" && pendingKeys.includes(currentWeekKey);
 
   const [sendingWeek, setSendingWeek] = useState(false);
 
@@ -350,6 +368,11 @@ export function PlanningView({
           />
           <div className="ml-auto flex items-center gap-3">
             {isPending ? <span className="text-xs text-slate-400">Enregistrement...</span> : null}
+            {showUnsentWarning ? (
+              <span className="max-w-[280px] text-right text-xs font-medium text-red-600">
+                La modification de la semaine en cours n&apos;a pas été envoyée.
+              </span>
+            ) : null}
             {isAdmin && view === "week" ? (
               <Button variant="secondary" onClick={handleSendWeek} disabled={sendingWeek}>
                 {sendingWeek ? "Envoi..." : "Envoyer la semaine par email"}

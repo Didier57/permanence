@@ -52,10 +52,14 @@ export type BuiltEmail = {
   recipients: string[];
 };
 
-export function buildWeekEmail(snapshot: WeekSnapshot): BuiltEmail {
+export function buildWeekEmail(
+  snapshot: WeekSnapshot,
+  options?: { isUpdate?: boolean },
+): BuiltEmail {
   const start = fromDateInput(snapshot.weekStart);
   const end = fromDateInput(snapshot.weekEnd);
-  const subject = `Permanence semaine ${snapshot.weekNumber} du ${formatDateFr(start)} à ${formatDateFr(end)}`;
+  const suffix = options?.isUpdate ? " (UPDATE)" : "";
+  const subject = `Permanence semaine ${snapshot.weekNumber} du ${formatDateFr(start)} à ${formatDateFr(end)}${suffix}`;
 
   const byDate = new Map<string, PlanningEntry[]>();
   for (const entry of snapshot.entries) {
@@ -129,7 +133,7 @@ export async function sendWeekEmail(options: {
     return { ok: false, error: "Aucune permanence pour cette semaine." };
   }
 
-  const email = buildWeekEmail(snapshot);
+  const email = buildWeekEmail(snapshot, { isUpdate: options.type === "RESEND_AFTER_CHANGE" });
   if (email.recipients.length === 0) {
     return { ok: false, error: "Aucun destinataire identifié." };
   }
