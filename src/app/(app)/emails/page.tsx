@@ -23,6 +23,8 @@ const EMPTY_CONFIG: EmailConfigView = {
   timezone: "Europe/Paris",
   enabled: false,
   hasPassword: false,
+  introHtml: "",
+  outroHtml: "",
 };
 
 export default async function EmailsPage() {
@@ -50,6 +52,8 @@ export default async function EmailsPage() {
         timezone: record.timezone,
         enabled: record.enabled,
         hasPassword: Boolean(record.smtpPasswordEncrypted),
+        introHtml: record.introHtml ?? "",
+        outroHtml: record.outroHtml ?? "",
       }
     : EMPTY_CONFIG;
 

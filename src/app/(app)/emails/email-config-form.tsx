@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { RichTextEditor } from "@/components/rich-text-editor";
 import { Alert, Button, Field, Input, Select } from "@/components/ui";
 import {
   saveEmailConfiguration,
@@ -22,6 +23,8 @@ export type EmailConfigView = {
   timezone: string;
   enabled: boolean;
   hasPassword: boolean;
+  introHtml: string;
+  outroHtml: string;
 };
 
 const INITIAL: EmailActionState = {};
@@ -111,6 +114,36 @@ export function EmailConfigForm({
           </Field>
           <Field label="Fuseau horaire" htmlFor="timezone">
             <Input id="timezone" name="timezone" defaultValue={config.timezone} required />
+          </Field>
+        </div>
+
+        <div className="flex flex-col gap-4 border-t border-slate-200 pt-4">
+          <div>
+            <h3 className="text-sm font-semibold text-slate-800">Modele du message</h3>
+            <p className="text-xs text-slate-500">
+              Ces textes sont inseres dans l&apos;email, au-dessus puis en dessous du planning. Laissez vide
+              pour ne rien ajouter. Collez du texte brut : la mise en forme se fait avec la barre d&apos;outils.
+            </p>
+          </div>
+          <Field
+            label="Texte au-dessus du planning"
+            hint="Insere juste apres le numero de semaine et les dates, avant la liste des groupes."
+          >
+            <RichTextEditor
+              name="introHtml"
+              defaultValue={config.introHtml}
+              placeholder="Ex. Merci de prevenir en cas d'empechement."
+            />
+          </Field>
+          <Field
+            label="Texte en dessous du planning"
+            hint="Insere apres la liste des groupes, en fin d'email."
+          >
+            <RichTextEditor
+              name="outroHtml"
+              defaultValue={config.outroHtml}
+              placeholder="Ex. Contact : responsable@exemple.fr"
+            />
           </Field>
         </div>
 

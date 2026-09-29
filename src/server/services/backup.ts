@@ -63,6 +63,8 @@ export type BackupData = {
     sendTime: string;
     timezone: string;
     enabled: boolean;
+    introHtml: string | null;
+    outroHtml: string | null;
   } | null;
   appConfiguration: { appUrl: string | null } | null;
 };
@@ -142,6 +144,8 @@ export async function createBackup(): Promise<BackupData> {
           sendTime: emailConfiguration.sendTime,
           timezone: emailConfiguration.timezone,
           enabled: emailConfiguration.enabled,
+          introHtml: emailConfiguration.introHtml,
+          outroHtml: emailConfiguration.outroHtml,
         }
       : null,
     appConfiguration: appConfiguration ? { appUrl: appConfiguration.appUrl } : null,
@@ -229,6 +233,8 @@ const backupSchema = z.object({
       sendTime: z.string().default("09:00"),
       timezone: z.string().default("Europe/Paris"),
       enabled: z.boolean().default(false),
+      introHtml: z.string().nullish(),
+      outroHtml: z.string().nullish(),
     })
     .nullish(),
   appConfiguration: z.object({ appUrl: z.string().nullish() }).nullish(),
@@ -458,6 +464,8 @@ export async function restoreBackup(input: unknown, mode: RestoreMode): Promise<
           sendTime: config.sendTime,
           timezone: config.timezone,
           enabled: config.enabled,
+          introHtml: config.introHtml ?? null,
+          outroHtml: config.outroHtml ?? null,
         };
         await tx.emailConfiguration.upsert({
           where: { id: "default" },

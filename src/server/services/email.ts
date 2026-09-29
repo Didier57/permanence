@@ -2,6 +2,7 @@ import { decryptSecret } from "@/lib/crypto";
 import { addDays, dateKey, dayNameFrCapitalized, formatDateFr, fromDateInput, toUTCDateOnly } from "@/lib/date";
 import { prisma } from "@/lib/db";
 import { getEnv } from "@/lib/env";
+import { htmlToPlainText, sanitizeRichText } from "@/lib/html";
 import { logger } from "@/lib/logger";
 import {
   createTransport,
@@ -76,12 +77,15 @@ function rangeLabel(days: Date[], start: number, end: number): string {
 
 export function buildWeekEmail(
   snapshot: WeekSnapshot,
-  options?: { isUpdate?: boolean },
+  options?: { isUpdate?: boolean; introHtml?: string | null; outroHtml?: string | null },
 ): BuiltEmail {
   const start = fromDateInput(snapshot.weekStart);
   const end = fromDateInput(snapshot.weekEnd);
   const suffix = options?.isUpdate ? " (UPDATE)" : "";
   const subject = `Permanence semaine ${snapshot.weekNumber} du ${formatDateFr(start)} à ${formatDateFr(end)}${suffix}`;
+
+  const introHtml = options?.introHtml ? sanitizeRichText(options.introHtml) : null;
+  const outroHtml = options?.outroHtml ? sanitizeRichText(options.outroHtml) : null;
 
   const weekStart = fromDateInput(snapshot.weekStart);
   const days = Array.from({ length: 7 }, (_, index) => addDays(weekStart, index));
@@ -102,10 +106,16 @@ export function buildWeekEmail(
 
   let text = `Planning des permanences\n`;
   text += `Semaine ${snapshot.weekNumber} du ${formatDateFr(start)} au ${formatDateFr(end)}\n\n`;
+  if (introHtml) {
+    text += `${htmlToPlainText(introHtml)}\n\n`;
+  }
 
   let html = `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"></head><body style="font-family:Arial,Helvetica,sans-serif;color:#0f172a;">`;
   html += `<h1 style="font-size:18px;">Planning des permanences</h1>`;
   html += `<p><strong>Semaine ${snapshot.weekNumber}</strong> du ${formatDateFr(start)} au ${formatDateFr(end)}</p>`;
+  if (introHtml) {
+    html += `<div style="margin:16px 0;">${introHtml}</div>`;
+  }
 
   for (const group of groups) {
     const groupTitle = group.groupDescription
@@ -127,6 +137,11 @@ export function buildWeekEmail(
     }
     html += `</table>`;
     text += `\n`;
+  }
+
+  if (outroHtml) {
+    text += `${htmlToPlainText(outroHtml)}\n\n`;
+    html += `<div style="margin:16px 0;">${outroHtml}</div>`;
   }
 
   html += `</body></html>`;
@@ -163,7 +178,11 @@ export async function sendWeekEmail(options: {
     return { ok: false, error: "Aucune permanence pour cette semaine." };
   }
 
-  const email = buildWeekEmail(snapshot, { isUpdate: options.type === "RESEND_AFTER_CHANGE" });
+  const email = buildWeekEmail(snapshot, {
+    isUpdate: options.type === "RESEND_AFTER_CHANGE",
+    introHtml: config.introHtml,
+    outroHtml: config.outroHtml,
+  });
   if (email.recipients.length === 0) {
     return { ok: false, error: "Aucun destinataire identifié." };
   }

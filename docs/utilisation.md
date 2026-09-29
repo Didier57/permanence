@@ -84,6 +84,14 @@ Menu **Emails** :
 
 - **Configuration SMTP** : parametres du serveur, expediteur, CC, jour/heure d'envoi, activation.
   Le bouton **Tester la configuration SMTP** envoie un message de verification.
+- **Modele du message** (administrateur) : deux zones de texte mises en forme, inserees dans chaque email :
+  - **Texte au-dessus du planning** : place juste apres le numero de semaine et les dates, avant la liste des groupes.
+  - **Texte en dessous du planning** : place apres la liste des groupes, en fin d'email.
+
+  L'editeur permet de mettre en gras, italique, souligne, de changer la **police**, la **taille**, la
+  **couleur du texte**, de surligner, d'inserer des **liens**, des titres, des listes et des alignements.
+  Le bouton **HTML** bascule vers le code source pour une retouche manuelle. Le contenu est nettoye
+  automatiquement (scripts et attributs dangereux supprimes). Laissez une zone vide pour ne rien ajouter.
 - **Envoi manuel** : choisir une date pour envoyer la planification de la semaine ISO correspondante.
 
 Chaque personne concernee recoit **un seul** email contenant **l'integralite** du planning de la semaine,

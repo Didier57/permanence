@@ -166,6 +166,32 @@ describe("buildWeekEmail", () => {
     expect(dangerous.html).not.toContain("<script>alert(1)</script>");
     expect(dangerous.html).toContain("&lt;script&gt;");
   });
+
+  it("insere le texte d'introduction avant les groupes et le texte de fin apres", () => {
+    const withTemplate = buildWeekEmail(snapshot, {
+      introHtml: '<p style="color:#dc2626;">Merci de prevenir en cas <strong>d\'empechement</strong>.</p>',
+      outroHtml: '<p>Contact : <a href="mailto:responsable@example.com">responsable@example.com</a></p>',
+    });
+
+    expect(withTemplate.html).toContain('color:#dc2626');
+    expect(withTemplate.html.indexOf("d'empechement")).toBeLessThan(
+      withTemplate.html.indexOf("Informatique"),
+    );
+    expect(withTemplate.html.indexOf("responsable@example.com")).toBeGreaterThan(
+      withTemplate.html.indexOf("Informatique"),
+    );
+    expect(withTemplate.text).toContain("Merci de prevenir en cas d'empechement.");
+    expect(withTemplate.text).toContain("Contact : responsable@example.com");
+  });
+
+  it("nettoie le HTML du modele avant de l'inserer", () => {
+    const withTemplate = buildWeekEmail(snapshot, {
+      introHtml: '<p onclick="steal()">Bonjour</p><script>alert(1)</script>',
+    });
+    expect(withTemplate.html).not.toContain("<script>");
+    expect(withTemplate.html).not.toContain("onclick");
+    expect(withTemplate.html).toContain("Bonjour");
+  });
 });
 
 describe("buildAccountEmail", () => {

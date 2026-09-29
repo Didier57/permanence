@@ -15,7 +15,7 @@ et suivi des versions envoyees.
   - vue **Mois** avec le numero de semaine de chaque ligne ;
   - **glisser-deposer** d'un utilisateur vers un jour (remplacement automatique si deja occupe) ;
   - depot sur une **semaine entiere** en vue Mois (remplit les 7 jours, avec confirmation de remplacement).
-- **Emails** : configuration SMTP, bouton de test, generation HTML + texte du planning complet
+- **Emails** : configuration SMTP, modele de message enrichi (texte au-dessus et en dessous du planning), bouton de test, generation HTML + texte du planning complet
   de la semaine, destinataires dedupliques, CC, envoi manuel.
 - **Envoi automatique** : un conteneur `worker` declenche l'envoi hebdomadaire (jour et heure configurables)
   de la planification de la **semaine suivante**.

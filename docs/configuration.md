@@ -36,6 +36,10 @@ Dans l'application : menu **Emails**.
 - Adresse d'expedition, nom d'expedition, adresse de reponse.
 - Destinataires en copie (CC), separes par des virgules.
 - Jour d'envoi, heure d'envoi, activation de l'envoi automatique.
+- **Modele du message** : texte enrichi insere au-dessus (apres le numero de semaine et les dates) et en
+  dessous du planning de chaque email. L'editeur integre la police, la taille, la couleur, les liens, les listes
+  et les alignements ; le bouton **HTML** permet d'editer le code source. Le contenu est nettoye cote serveur
+  avant enregistrement et avant chaque envoi.
 - Bouton **Tester la configuration SMTP** : envoie un email de test et affiche un message clair.
 
 Le mot de passe SMTP est chiffre (AES-256-GCM) avant stockage et n'est **jamais** reaffiche en clair

@@ -6,6 +6,7 @@ import { getCurrentAccount, requireAdmin, requireManager } from "@/lib/auth";
 import { encryptSecret } from "@/lib/crypto";
 import { fromDateInput, getISOWeekInfo } from "@/lib/date";
 import { prisma } from "@/lib/db";
+import { sanitizeRichText } from "@/lib/html";
 import { logger } from "@/lib/logger";
 import { emailAddress as emailAddressSchema, parseRecipients } from "@/lib/recipients";
 import { sendTestEmail, sendWeekEmail } from "./services/email";
@@ -26,6 +27,8 @@ const configSchema = z.object({
   sendTime: z.string().regex(/^\d{2}:\d{2}$/, "Heure invalide (HH:MM)"),
   timezone: z.string().trim().min(1).max(100),
   enabled: z.boolean(),
+  introHtml: z.string().max(50000).optional(),
+  outroHtml: z.string().max(50000).optional(),
 });
 
 export async function saveEmailConfiguration(
@@ -50,6 +53,8 @@ export async function saveEmailConfiguration(
     sendTime: formData.get("sendTime") ?? "09:00",
     timezone: (formData.get("timezone") as string) || "Europe/Paris",
     enabled: formData.get("enabled") === "on",
+    introHtml: formData.get("introHtml") ?? undefined,
+    outroHtml: formData.get("outroHtml") ?? undefined,
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Donnees invalides." };
@@ -88,6 +93,8 @@ export async function saveEmailConfiguration(
     sendTime: data.sendTime,
     timezone: data.timezone,
     enabled: data.enabled,
+    introHtml: data.introHtml ? sanitizeRichText(data.introHtml) : null,
+    outroHtml: data.outroHtml ? sanitizeRichText(data.outroHtml) : null,
   };
 
   await prisma.emailConfiguration.upsert({
