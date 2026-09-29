@@ -11,7 +11,7 @@ import {
 } from "@/lib/date";
 import { prisma } from "@/lib/db";
 import { hasPendingResend } from "@/server/services/planning";
-import { PlanningView, type EntryMap, type PlanningGroup } from "./planning-view";
+import { PlanningView, type EntryMap, type PlanningGroup, type UserInfo } from "./planning-view";
 
 export const metadata = { title: "Planning - Permanence" };
 
@@ -37,7 +37,7 @@ export default async function PlanningPage({ searchParams }: PageProps<"/plannin
         }
       : { start: startOfISOWeek(anchorDate), end: endOfISOWeek(anchorDate) };
 
-  const [groups, permanences] = await Promise.all([
+  const [groups, permanences, users] = await Promise.all([
     prisma.group.findMany({
       orderBy: { name: "asc" },
       include: {
@@ -52,7 +52,33 @@ export default async function PlanningPage({ searchParams }: PageProps<"/plannin
         user: { select: { firstName: true, lastName: true } },
       },
     }),
+    prisma.user.findMany({
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        proPhone: true,
+        privatePhone: true,
+        memberships: { select: { group: { select: { name: true } } } },
+      },
+      orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
+    }),
   ]);
+
+  const directory: Record<string, UserInfo> = {};
+  for (const user of users) {
+    directory[user.id] = {
+      id: user.id,
+      name: `${user.firstName} ${user.lastName}`,
+      email: user.email,
+      proPhone: user.proPhone,
+      privatePhone: user.privatePhone,
+      groups: user.memberships
+        .map((membership) => membership.group.name)
+        .sort((a, b) => a.localeCompare(b)),
+    };
+  }
 
   const planningGroups: PlanningGroup[] = groups.map((group) => ({
     id: group.id,
@@ -93,6 +119,7 @@ export default async function PlanningPage({ searchParams }: PageProps<"/plannin
       groups={planningGroups}
       entries={entries}
       pendingResend={pendingResend}
+      directory={directory}
     />
   );
 }

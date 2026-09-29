@@ -43,6 +43,14 @@ export type PlanningGroup = {
 };
 
 export type EntryMap = Record<string, Record<string, { userId: string; userName: string }>>;
+export type UserInfo = {
+  id: string;
+  name: string;
+  email: string;
+  proPhone: string | null;
+  privatePhone: string | null;
+  groups: string[];
+};
 
 export type PlanningViewProps = {
   view: "week" | "month";
@@ -51,6 +59,7 @@ export type PlanningViewProps = {
   groups: PlanningGroup[];
   entries: EntryMap;
   pendingResend: { weekYear: number; weekNumber: number } | null;
+  directory: Record<string, UserInfo>;
 };
 
 type DragPayload = { userId: string; groupId: string; userName: string };
@@ -94,6 +103,63 @@ function DraggableUser({
   );
 }
 
+function UserInfoModal({ user, onClose }: { user: UserInfo; onClose: () => void }) {
+  const t = useTranslations();
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-md rounded-lg border border-slate-200 bg-white p-5 shadow-lg"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="mb-4 flex items-start justify-between gap-3">
+          <h2 className="text-lg font-semibold text-slate-900">{user.name}</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-slate-400 hover:text-slate-700"
+            aria-label={t("Fermer")}
+          >
+            &times;
+          </button>
+        </div>
+        <dl className="flex flex-col gap-3 text-sm">
+          <div>
+            <dt className="text-slate-500">{t("Telephone professionnel")}</dt>
+            <dd className="font-medium text-slate-900">{user.proPhone ?? "—"}</dd>
+          </div>
+          <div>
+            <dt className="text-slate-500">{t("Telephone prive")}</dt>
+            <dd className="font-medium text-slate-900">{user.privatePhone ?? "—"}</dd>
+          </div>
+          <div>
+            <dt className="text-slate-500">Email</dt>
+            <dd className="font-medium text-slate-900">
+              <a href={`mailto:${user.email}`} className="text-sky-600 hover:underline">
+                {user.email}
+              </a>
+            </dd>
+          </div>
+          <div>
+            <dt className="text-slate-500">{t("Groupes")}</dt>
+            <dd className="font-medium text-slate-900">
+              {user.groups.length === 0 ? t("Aucun groupe.") : user.groups.join(", ")}
+            </dd>
+          </div>
+        </dl>
+        <div className="mt-5 flex justify-end">
+          <Button variant="secondary" onClick={onClose}>
+            {t("Fermer")}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function DropCell({
   id,
   data,
@@ -128,6 +194,7 @@ export function PlanningView({
   groups,
   entries,
   pendingResend,
+  directory,
 }: PlanningViewProps) {
   const router = useRouter();
   const t = useTranslations();
@@ -141,6 +208,7 @@ export function PlanningView({
     canEdit && pendingResend ? pendingResend : null,
   );
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
   const anchorDate = useMemo(() => fromDateInput(anchor), [anchor]);
@@ -515,7 +583,13 @@ export function PlanningView({
                                     style={{ borderLeftColor: group.color ?? "#0ea5e9" }}
                                     className="flex items-center justify-between gap-1 rounded border border-slate-200 border-l-4 bg-white px-2 py-1 text-xs text-slate-700"
                                   >
-                                    <span className="truncate">{entry.userName}</span>
+                                    <button
+                      type="button"
+                      onClick={() => setSelectedUserId(entry.userId)}
+                      className="truncate text-left hover:underline"
+                    >
+                      {entry.userName}
+                    </button>
                                     {canEdit ? (
                                       <button
                                         type="button"
@@ -610,7 +684,13 @@ export function PlanningView({
                                             <span className="text-slate-400">
                                               {group?.name ?? "?"} :
                                             </span>{" "}
-                                            {entry.userName}
+                                            <button
+                                              type="button"
+                                              onClick={() => setSelectedUserId(entry.userId)}
+                                              className="truncate text-left hover:underline"
+                                            >
+                                              {entry.userName}
+                                            </button>
                                           </span>
                                           {canEdit ? (
                                             <button
@@ -640,6 +720,13 @@ export function PlanningView({
           </main>
         </div>
       </div>
+
+      {selectedUserId && directory[selectedUserId] ? (
+        <UserInfoModal
+          user={directory[selectedUserId]}
+          onClose={() => setSelectedUserId(null)}
+        />
+      ) : null}
 
       <DragOverlay>
         {active ? (

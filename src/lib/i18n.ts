@@ -42,6 +42,7 @@ export const EN_MESSAGES: Record<string, string> = {
   "Mode clair": "Light mode",
   "Basculer entre le theme clair et sombre": "Switch between light and dark theme",
   "Reduire ou deplier le menu": "Collapse or expand the menu",
+  "Changer de langue": "Change language",
 
   // Roles
   Administrateur: "Administrator",

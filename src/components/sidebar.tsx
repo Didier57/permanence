@@ -15,6 +15,7 @@ import {
   UserIcon,
   UsersIcon,
 } from "@/components/icons";
+import { LanguageToggle } from "@/components/language-toggle";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useTranslations } from "@/components/locale-provider";
 import { logoutAction } from "@/server/auth-actions";
@@ -120,6 +121,7 @@ export function Sidebar({
             {t(ROLE_LABELS[role])}
           </span>
         </p>
+        <LanguageToggle />
         <ThemeToggle />
         <form action={logoutAction}>
           <button
