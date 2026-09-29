@@ -326,14 +326,14 @@ export function PlanningView({
             <button
               type="button"
               onClick={() => navigate("week", anchor)}
-              className={`px-3 py-1.5 text-sm ${view === "week" ? "bg-sky-600 text-white" : "bg-white text-slate-600"}`}
+              className={`px-3 py-1.5 text-sm ${view === "week" ? "bg-sky-600 text-on-brand" : "bg-white text-slate-600"}`}
             >
               Semaine
             </button>
             <button
               type="button"
               onClick={() => navigate("month", anchor)}
-              className={`px-3 py-1.5 text-sm ${view === "month" ? "bg-sky-600 text-white" : "bg-white text-slate-600"}`}
+              className={`px-3 py-1.5 text-sm ${view === "month" ? "bg-sky-600 text-on-brand" : "bg-white text-slate-600"}`}
             >
               Mois
             </button>
@@ -372,10 +372,10 @@ export function PlanningView({
           <div
             className={`rounded-md px-3 py-2 text-sm ${
               message.tone === "error"
-                ? "bg-red-50 text-red-700"
+                ? "bg-red-50 text-red-700 dark:bg-red-500/15 dark:text-red-300"
                 : message.tone === "success"
-                  ? "bg-emerald-50 text-emerald-700"
-                  : "bg-sky-50 text-sky-700"
+                  ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300"
+                  : "bg-sky-50 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300"
             }`}
           >
             {message.text}
@@ -456,7 +456,9 @@ export function PlanningView({
                         <th
                           key={dateKey(day)}
                           className={`border-b border-l border-slate-200 p-2 text-center text-xs ${
-                            dateKey(day) === today ? "bg-sky-50 text-sky-700" : "text-slate-600"
+                            dateKey(day) === today
+                              ? "bg-sky-50 text-sky-700 dark:bg-sky-500/10 dark:text-sky-300"
+                              : "text-slate-600"
                           }`}
                         >
                           <div className="font-semibold">{dayNameFrCapitalized(day)}</div>
@@ -490,7 +492,7 @@ export function PlanningView({
                                   (active !== null && !isMemberOfGroup(active.userId, group.id))
                                 }
                                 className={`min-h-[52px] rounded p-1 ${
-                                  dateKey(day) === today ? "bg-sky-50/50" : ""
+                                  dateKey(day) === today ? "bg-sky-50/50 dark:bg-sky-500/10" : ""
                                 }`}
                               >
                                 {entry ? (
@@ -573,7 +575,7 @@ export function PlanningView({
                               >
                                 <div
                                   className={`min-h-[64px] rounded p-0.5 ${
-                                    key === today ? "bg-sky-50/50" : ""
+                                    key === today ? "bg-sky-50/50 dark:bg-sky-500/10" : ""
                                   }`}
                                 >
                                   <div className="mb-1 text-[11px] text-slate-400">

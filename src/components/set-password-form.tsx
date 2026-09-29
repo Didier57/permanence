@@ -41,7 +41,7 @@ export function SetPasswordForm({
         <Alert tone="success">{state.message}</Alert>
         <Link
           href="/login"
-          className="rounded-md bg-sky-600 px-4 py-2 text-center text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700"
+          className="rounded-md bg-sky-600 px-4 py-2 text-center text-sm font-semibold text-on-brand shadow-sm transition hover:bg-sky-700"
         >
           Se connecter
         </Link>

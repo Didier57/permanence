@@ -11,6 +11,14 @@ terminee ; des qu'une connexion reussit avec l'ancien mot de passe, le lien en a
 Le menu **Mon compte** (accessible a tous les roles) affiche les informations de connexion et
 permet de changer son propre mot de passe.
 
+## Interface : menu reduit et mode sombre
+
+- Le bouton en haut du menu lateral (**&lt;** / **&gt;**) reduit le menu pour n'afficher que des
+  icones, ce qui libere de l'espace pour le planning. Le choix est memorise par le navigateur.
+- Juste au-dessus du bouton **Deconnexion**, l'icone lune/soleil bascule entre le **mode clair**
+  et le **mode sombre**. Le choix est memorise par le navigateur ; sans choix explicite,
+  l'application suit le reglage du systeme.
+
 ## Roles et acces
 
 Chaque personne peut avoir, dans **Personnel**, un champ **Acces a l'application** :

@@ -50,7 +50,7 @@ export function RestoreForm() {
             onChange={() => setMode("replace")}
           />
           <span>
-            <span className="font-medium text-red-700">Restauration complete</span>
+            <span className="font-medium text-red-700 dark:text-red-300">Restauration complete</span>
             <span className="block text-slate-500">
               Les personnes, groupes et permanences actuels sont supprimes puis remplaces par
               le contenu du fichier. Les comptes d&apos;acces du fichier sont crees ou mis a jour,
@@ -61,7 +61,7 @@ export function RestoreForm() {
       </div>
 
       {mode === "replace" ? (
-        <label className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+        <label className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-200">
           <input type="checkbox" name="confirmReplace" className="mt-0.5" />
           <span>
             Je confirme la suppression des donnees actuelles (personnel, groupes, planning)

@@ -90,8 +90,8 @@ export default async function HistoryPage() {
                       <span
                         className={
                           entry.status === "SUCCESS"
-                            ? "rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700"
-                            : "rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700"
+                            ? "rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300"
+                            : "rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-500/15 dark:text-red-300"
                         }
                       >
                         {STATUS_LABELS[entry.status] ?? entry.status}

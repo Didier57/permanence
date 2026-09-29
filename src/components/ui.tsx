@@ -3,9 +3,9 @@ import { cn } from "@/lib/cn";
 type ButtonVariant = "primary" | "secondary" | "danger" | "ghost";
 
 const BUTTON_STYLES: Record<ButtonVariant, string> = {
-  primary: "bg-sky-600 text-white hover:bg-sky-700",
+  primary: "bg-sky-600 text-on-brand hover:bg-sky-700",
   secondary: "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50",
-  danger: "bg-red-600 text-white hover:bg-red-700",
+  danger: "bg-red-600 text-on-brand hover:bg-red-700",
   ghost: "text-slate-600 hover:bg-slate-100",
 };
 
@@ -88,9 +88,9 @@ export function Alert({
   children: React.ReactNode;
 }) {
   const tones = {
-    error: "bg-red-50 text-red-700",
-    success: "bg-emerald-50 text-emerald-700",
-    info: "bg-sky-50 text-sky-700",
+    error: "bg-red-50 text-red-700 dark:bg-red-500/15 dark:text-red-300",
+    success: "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300",
+    info: "bg-sky-50 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300",
   } as const;
   return (
     <p role="alert" className={cn("rounded-md px-3 py-2 text-sm", tones[tone])}>

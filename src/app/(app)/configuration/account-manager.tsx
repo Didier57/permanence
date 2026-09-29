@@ -20,8 +20,9 @@ export type PersonOption = { id: string; label: string };
 const INITIAL: AccountActionState = {};
 
 const ROLE_BADGE: Record<AccountRole, string> = {
-  ADMIN: "rounded-full bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700",
-  MANAGER: "rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700",
+  ADMIN: "rounded-full bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700 dark:bg-sky-500/15 dark:text-sky-300",
+  MANAGER:
+    "rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300",
   USER: "rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600",
 };
 

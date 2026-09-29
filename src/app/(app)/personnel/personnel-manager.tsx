@@ -137,9 +137,9 @@ const ACCOUNT_STATUS_LABEL: Record<AccountStatus, string> = {
 
 const ACCOUNT_STATUS_STYLE: Record<AccountStatus, string> = {
   NONE: "bg-slate-100 text-slate-500",
-  PENDING: "bg-amber-100 text-amber-700",
-  ACTIVE: "bg-emerald-100 text-emerald-700",
-  DISABLED: "bg-red-100 text-red-700",
+  PENDING: "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300",
+  ACTIVE: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300",
+  DISABLED: "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300",
 };
 
 const invitationInitialState: InvitationState = {};

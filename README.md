@@ -22,6 +22,7 @@ et suivi des versions envoyees.
 - **Version de planning** : l'application compare la version envoyee a la version courante et propose
   un renvoi lorsque le planning a ete modifie apres l'envoi.
 - **Historique** de chaque envoi (date, semaine, type, destinataires, CC, statut, erreur, version).
+- **Interface** : menu lateral repliable en icones et **mode sombre** memorise par le navigateur.
 - **Sauvegarde / restauration** : export JSON du personnel, des comptes d'acces, des groupes, du
   planning et de la configuration, reimport avec choix **mise a jour** ou **restauration complete**.
 
