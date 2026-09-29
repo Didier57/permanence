@@ -21,6 +21,10 @@ RUN npm ci
 # Build : generation du client Prisma + compilation Next.js
 # ---------------------------------------------------------------------------
 FROM base AS builder
+# DATABASE_URL factice : requise pour charger prisma.config.ts pendant le build.
+# La vraie valeur est fournie au runtime par docker compose.
+ARG DATABASE_URL="postgresql://build:build@localhost:5432/build?schema=public"
+ENV DATABASE_URL=$DATABASE_URL
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npx prisma generate
