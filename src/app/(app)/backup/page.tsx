@@ -13,9 +13,10 @@ export default async function BackupPage() {
     redirect("/planning");
   }
 
-  const [userCount, groupCount, membershipCount, permanenceCount, emailConfig, appConfig] =
+  const [userCount, accountCount, groupCount, membershipCount, permanenceCount, emailConfig, appConfig] =
     await Promise.all([
       prisma.user.count(),
+      prisma.account.count(),
       prisma.group.count(),
       prisma.userGroup.count(),
       prisma.permanence.count(),
@@ -36,15 +37,20 @@ export default async function BackupPage() {
         <Card className="p-6">
           <h2 className="mb-2 text-base font-semibold text-slate-800">Contenu de la sauvegarde</h2>
           <p className="mb-4 text-sm text-slate-500">
-            Le fichier exporte contient le personnel, les groupes et leurs affectations, le
-            planning des permanences, la configuration du site (identifiants SMTP chiffres,
-            expediteur, CC, jour et heure d&apos;envoi) ainsi que l&apos;adresse publique.
-            Les comptes d&apos;acces et l&apos;historique des emails ne sont pas inclus.
+            Le fichier exporte contient le personnel, les comptes d&apos;acces (empreintes des mots
+            de passe, roles et etat), les groupes et leurs affectations, le planning des
+            permanences, la configuration du site (identifiants SMTP chiffres, expediteur, CC, jour
+            et heure d&apos;envoi) ainsi que l&apos;adresse publique. L&apos;historique des emails
+            et les liens d&apos;activation en cours ne sont pas inclus.
           </p>
           <dl className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
             <div className="rounded-md bg-slate-50 p-3">
               <dt className="text-slate-500">Personnes</dt>
               <dd className="text-lg font-semibold text-slate-900">{userCount}</dd>
+            </div>
+            <div className="rounded-md bg-slate-50 p-3">
+              <dt className="text-slate-500">Comptes d&apos;acces</dt>
+              <dd className="text-lg font-semibold text-slate-900">{accountCount}</dd>
             </div>
             <div className="rounded-md bg-slate-50 p-3">
               <dt className="text-slate-500">Groupes</dt>
@@ -80,8 +86,10 @@ export default async function BackupPage() {
           <h2 className="mb-2 text-base font-semibold text-slate-800">Restaurer une sauvegarde</h2>
           <p className="mb-4 text-sm text-slate-500">
             La restauration remplace ou met a jour les personnes, groupes et permanences. Les
-            comptes d&apos;acces restent inchanges ; un compte dont la personne est retrouvee par
-            son email est automatiquement relie a nouveau.
+            comptes d&apos;acces du fichier sont crees ou mis a jour (empreinte du mot de passe,
+            role, etat) sans jamais supprimer les comptes existants : un compte dont la personne
+            est retrouvee par son email est automatiquement relie a nouveau. La restauration est
+            refusee si elle ne laisserait aucun administrateur actif.
           </p>
           <RestoreForm />
         </Card>

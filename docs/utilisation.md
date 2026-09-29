@@ -98,15 +98,21 @@ Menu **Historique** : liste des envois (date/heure, semaine, periode, type, dest
 
 ## Sauvegarde et restauration
 
-Menu **Sauvegarde** (administrateurs) : exporte un fichier JSON contenant le **personnel**, les
-**groupes** et leurs membres, le **planning**, la **configuration email** (SMTP, CC, jour et heure
-d'envoi) et l'**adresse du site**. Les comptes d'acces et l'historique des emails ne sont pas inclus.
+Menu **Sauvegarde** (administrateurs) : exporte un fichier JSON contenant le **personnel**, les **comptes
+d'acces** (empreinte des mots de passe, role, etat), les **groupes** et leurs membres, le **planning**,
+la **configuration email** (SMTP, CC, jour et heure d'envoi) et l'**adresse du site**. L'historique des
+emails n'est pas inclus.
 
-- **Telecharger la sauvegarde** enregistre le fichier JSON.
+- **Telecharger la sauvegarde** enregistre le fichier JSON. Conservez-le dans un emplacement protege :
+  il permet de recreer les comptes avec leurs mots de passe actuels.
 - **Restaurer** propose deux modes :
   - **Mise a jour** : chaque enregistrement du fichier est ajoute ou met a jour ; les donnees
     actuelles qui ne figurent pas dans la sauvegarde sont conservees.
   - **Restauration complete** : le contenu actuel (personnel, groupes, planning) est **supprime**
     avant l'import. Une confirmation explicite est demandee.
+
+Dans les deux modes, les comptes d'acces du fichier sont crees ou mis a jour et les comptes existants ne
+sont jamais supprimes ; un compte dont la personne est retrouvee par son email est relie a nouveau. La
+restauration est refusee si elle ne laisserait aucun administrateur actif.
 
 Ce mecanisme complete le dump PostgreSQL decrit dans [Sauvegarde et restauration](sauvegarde-restauration.md).

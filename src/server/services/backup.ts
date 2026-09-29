@@ -19,6 +19,17 @@ export type BackupData = {
     createdAt: string;
     updatedAt: string;
   }[];
+  accounts: {
+    email: string;
+    displayName: string | null;
+    role: "ADMIN" | "MANAGER" | "USER";
+    active: boolean;
+    activatedAt: string | null;
+    passwordHash: string;
+    userId: string | null;
+    createdAt: string;
+    updatedAt: string;
+  }[];
   groups: {
     id: string;
     name: string;
@@ -57,9 +68,10 @@ export type BackupData = {
 };
 
 export async function createBackup(): Promise<BackupData> {
-  const [users, groups, memberships, permanences, emailConfiguration, appConfiguration] =
+  const [users, accounts, groups, memberships, permanences, emailConfiguration, appConfiguration] =
     await Promise.all([
       prisma.user.findMany({ orderBy: [{ lastName: "asc" }, { firstName: "asc" }] }),
+      prisma.account.findMany({ orderBy: { email: "asc" } }),
       prisma.group.findMany({ orderBy: { name: "asc" } }),
       prisma.userGroup.findMany({ orderBy: { createdAt: "asc" } }),
       prisma.permanence.findMany({ orderBy: [{ date: "asc" }, { groupId: "asc" }] }),
@@ -80,6 +92,17 @@ export async function createBackup(): Promise<BackupData> {
       active: user.active,
       createdAt: user.createdAt.toISOString(),
       updatedAt: user.updatedAt.toISOString(),
+    })),
+    accounts: accounts.map((account) => ({
+      email: account.email,
+      displayName: account.displayName,
+      role: account.role,
+      active: account.active,
+      activatedAt: account.activatedAt ? account.activatedAt.toISOString() : null,
+      passwordHash: account.passwordHash,
+      userId: account.userId,
+      createdAt: account.createdAt.toISOString(),
+      updatedAt: account.updatedAt.toISOString(),
     })),
     groups: groups.map((group) => ({
       id: group.id,
@@ -138,6 +161,21 @@ const backupSchema = z.object({
         privatePhone: z.string().nullish(),
         email: z.string(),
         active: z.boolean().optional(),
+        createdAt: z.string().optional(),
+        updatedAt: z.string().optional(),
+      }),
+    )
+    .default([]),
+  accounts: z
+    .array(
+      z.object({
+        email: z.string().min(1),
+        displayName: z.string().nullish(),
+        role: z.enum(["ADMIN", "MANAGER", "USER"]).default("USER"),
+        active: z.boolean().optional(),
+        activatedAt: z.string().nullish(),
+        passwordHash: z.string().min(1),
+        userId: z.string().nullish(),
         createdAt: z.string().optional(),
         updatedAt: z.string().optional(),
       }),
@@ -205,6 +243,7 @@ export function parseBackup(input: unknown) {
 export type RestoreResult = {
   mode: RestoreMode;
   users: number;
+  accounts: number;
   groups: number;
   memberships: number;
   permanences: number;
@@ -228,6 +267,7 @@ export async function restoreBackup(input: unknown, mode: RestoreMode): Promise<
       const groupIdMap = new Map<string, string>();
       let membershipCount = 0;
       let permanenceCount = 0;
+      let accountCount = 0;
       let emailConfigurationSaved = false;
       let appConfigurationSaved = false;
 
@@ -328,6 +368,43 @@ export async function restoreBackup(input: unknown, mode: RestoreMode): Promise<
         }
       }
 
+      for (const account of data.accounts) {
+        const existing = await tx.account.findUnique({ where: { email: account.email } });
+        const linkedUserId = account.userId ? (userIdMap.get(account.userId) ?? null) : null;
+        const payload = {
+          displayName: account.displayName ?? null,
+          role: account.role,
+          active: account.active ?? true,
+          activatedAt: account.activatedAt ? optionalDate(account.activatedAt) ?? null : null,
+          passwordHash: account.passwordHash,
+        };
+        if (existing) {
+          await tx.account.update({
+            where: { id: existing.id },
+            data: { ...payload, userId: linkedUserId ?? existing.userId },
+          });
+        } else {
+          await tx.account.create({
+            data: {
+              email: account.email,
+              ...payload,
+              userId: linkedUserId,
+              createdAt: optionalDate(account.createdAt) ?? undefined,
+            },
+          });
+        }
+        accountCount += 1;
+      }
+
+      const activeAdmins = await tx.account.count({
+        where: { role: "ADMIN", active: true },
+      });
+      if (activeAdmins === 0) {
+        throw new Error(
+          "La restauration ne laisserait aucun administrateur actif. Operation annulee.",
+        );
+      }
+
       for (const membership of data.memberships) {
         const userId = userIdMap.get(membership.userId);
         const groupId = groupIdMap.get(membership.groupId);
@@ -412,6 +489,7 @@ export async function restoreBackup(input: unknown, mode: RestoreMode): Promise<
       return {
         mode,
         users: userIdMap.size,
+        accounts: accountCount,
         groups: groupIdMap.size,
         memberships: membershipCount,
         permanences: permanenceCount,

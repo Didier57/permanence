@@ -75,8 +75,9 @@ export async function restoreBackupAction(
       ok: true,
       message:
         `Restauration ${MODE_LABELS[restoreMode]} terminee : ` +
-        `${result.users} personne(s), ${result.groups} groupe(s), ` +
-        `${result.memberships} affectation(s) de groupe, ${result.permanences} permanence(s).`,
+        `${result.users} personne(s), ${result.accounts} compte(s) d'acces, ` +
+        `${result.groups} groupe(s), ${result.memberships} affectation(s) de groupe, ` +
+        `${result.permanences} permanence(s).`,
     };
   } catch (error) {
     logger.error({ err: error, mode: restoreMode }, "backup.restore.failed");

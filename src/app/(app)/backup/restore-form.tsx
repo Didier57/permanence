@@ -35,8 +35,8 @@ export function RestoreForm() {
             <span className="font-medium text-slate-800">Mettre a jour les donnees</span>
             <span className="block text-slate-500">
               Chaque enregistrement du fichier met a jour l&apos;enregistrement correspondant
-              (par identifiant, email ou nom). Les donnees actuelles non presentes dans le
-              fichier sont conservees.
+              (par identifiant, email ou nom), y compris les comptes d&apos;acces (mot de passe
+              et role). Les donnees actuelles non presentes dans le fichier sont conservees.
             </span>
           </span>
         </label>
@@ -53,7 +53,8 @@ export function RestoreForm() {
             <span className="font-medium text-red-700">Restauration complete</span>
             <span className="block text-slate-500">
               Les personnes, groupes et permanences actuels sont supprimes puis remplaces par
-              le contenu du fichier.
+              le contenu du fichier. Les comptes d&apos;acces du fichier sont crees ou mis a jour,
+              mais aucun compte existant n&apos;est supprime.
             </span>
           </span>
         </label>
@@ -64,7 +65,7 @@ export function RestoreForm() {
           <input type="checkbox" name="confirmReplace" className="mt-0.5" />
           <span>
             Je confirme la suppression des donnees actuelles (personnel, groupes, planning)
-            avant restauration.
+            avant restauration. Les comptes d&apos;acces ne sont pas supprimes.
           </span>
         </label>
       ) : null}

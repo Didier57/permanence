@@ -39,9 +39,15 @@ Le script arrete les services applicatifs, restaure la base, puis les redemarre.
 ## Sauvegarde applicative (JSON)
 
 Independamment du dump PostgreSQL, les administrateurs disposent du menu **Sauvegarde** qui exporte un
-fichier `permanence-backup-AAAAMMJJ.json` contenant le **personnel**, les **groupes** et leurs membres,
-le **planning**, la **configuration email** (mot de passe SMTP chiffre inclus), l'**adresse du site**
-et ses reglages. Les comptes d'acces et l'historique des emails ne sont pas inclus.
+fichier `permanence-backup-AAAAMMJJ.json` contenant le **personnel**, les **comptes d'acces** (empreinte
+des mots de passe, role, etat, activation), les **groupes** et leurs membres, le **planning**, la
+**configuration email** (mot de passe SMTP chiffre inclus), l'**adresse du site** et ses reglages.
+L'historique des emails, les sessions et les liens d'activation en cours ne sont pas inclus.
+
+> L'empreinte des mots de passe est incluse pour qu'une reinstallation complete sur un autre serveur
+> conserve les mots de passe existants. L'empreinte argon2id est portable (elle contient son sel et ses
+> parametres) et **n'est pas reversible** ; le fichier de sauvegarde doit toutefois etre conserve dans un
+> emplacement protege, car il permet des tentatives de devinette hors ligne.
 
 Ce format permet de reimporter les donnees via l'interface (page **Sauvegarde**) :
 
@@ -49,6 +55,14 @@ Ce format permet de reimporter les donnees via l'interface (page **Sauvegarde**)
 - **Restauration complete** : le personnel, les groupes et le planning actuels sont supprimes avant l'import
   (confirmation demandee). Les comptes d'acces existants sont rattaches a nouveau aux personnes lorsque
   leur email correspond.
+
+Dans les deux modes, les comptes d'acces du fichier sont crees ou mis a jour (mot de passe, role, etat)
+mais **aucun compte existant n'est supprime** : l'administrateur qui effectue la restauration ne peut pas
+se retrouver enferme dehors. La restauration est refusee si elle ne laisse aucun administrateur actif.
+
+Comme le mot de passe SMTP est chiffre avec `APP_SECRET`, il n'est reutilisable que si le serveur de
+restauration utilise le **meme** `APP_SECRET` ; dans le cas contraire, ressaisissez le mot de passe SMTP
+dans le menu **Emails**.
 
 Le dump PostgreSQL reste la reference pour une restauration a l'identique de toute la base
 (comptes, sessions, historique des emails).

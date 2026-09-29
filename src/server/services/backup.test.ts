@@ -12,6 +12,7 @@ describe("backupFileName", () => {
 describe("parseBackup", () => {
   it("accepte une sauvegarde minimale et complete les tableaux manquants", () => {
     const parsed = parseBackup({ users: [], groups: [] });
+    expect(parsed.accounts).toEqual([]);
     expect(parsed.memberships).toEqual([]);
     expect(parsed.permanences).toEqual([]);
     expect(parsed.emailConfiguration).toBeFalsy();
@@ -49,5 +50,44 @@ describe("parseBackup", () => {
     expect(parsed.emailConfiguration?.smtpPort).toBe(587);
     expect(parsed.emailConfiguration?.smtpEncryption).toBe("STARTTLS");
     expect(parsed.emailConfiguration?.ccRecipients).toEqual([]);
+  });
+
+  it("accepte un compte d'acces avec son empreinte de mot de passe", () => {
+    const parsed = parseBackup({
+      accounts: [
+        {
+          email: "didier@macchi.fr",
+          displayName: "Administrateur",
+          role: "ADMIN",
+          active: true,
+          activatedAt: "2026-10-01T08:00:00.000Z",
+          passwordHash: "$argon2id$v=19$m=19456,t=2,p=1$abc$def",
+          userId: "u1",
+        },
+      ],
+    });
+    expect(parsed.accounts).toHaveLength(1);
+    expect(parsed.accounts[0]?.role).toBe("ADMIN");
+    expect(parsed.accounts[0]?.passwordHash).toContain("$argon2id$");
+    expect(parsed.accounts[0]?.activatedAt).toBe("2026-10-01T08:00:00.000Z");
+  });
+
+  it("applique le role USER par defaut", () => {
+    const parsed = parseBackup({
+      accounts: [{ email: "jean@example.com", passwordHash: "$argon2id$abc" }],
+    });
+    expect(parsed.accounts[0]?.role).toBe("USER");
+    expect(parsed.accounts[0]?.active).toBeUndefined();
+  });
+
+  it("refuse un compte sans empreinte de mot de passe ou avec un role inconnu", () => {
+    expect(() => parseBackup({ accounts: [{ email: "jean@example.com" }] })).toThrow();
+    expect(() =>
+      parseBackup({
+        accounts: [
+          { email: "jean@example.com", passwordHash: "$argon2id$abc", role: "SUPERADMIN" },
+        ],
+      }),
+    ).toThrow();
   });
 });
