@@ -1,3 +1,7 @@
+# Deploiement de production : utilise uniquement l'image publiee sur GHCR.
+# Le serveur n'a besoin ni du code source ni du Dockerfile.
+# Pour construire l'image en local, ajouter docker-compose.build.yml :
+#   docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
 name: permanence
 
 services:
@@ -20,9 +24,6 @@ services:
 
   app:
     image: ghcr.io/didier57/permanence:latest
-    build:
-      context: .
-      target: runner
     restart: unless-stopped
     env_file:
       - .env
@@ -56,9 +57,6 @@ services:
 
   worker:
     image: ghcr.io/didier57/permanence:latest
-    build:
-      context: .
-      target: runner
     restart: unless-stopped
     command: ["node_modules/.bin/tsx", "src/worker/index.ts"]
     env_file:

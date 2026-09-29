@@ -42,13 +42,24 @@ Navigateur -> Application web (Next.js) -> PostgreSQL
 
 ```bash
 cp .env.example .env      # puis renseigner APP_SECRET et NEXT_SERVER_ACTIONS_ENCRYPTION_KEY
+docker compose pull
 docker compose up -d
 ```
+
+L'image est tiree depuis GHCR : le serveur n'a besoin ni du code source ni du `Dockerfile`.
 
 L'application est disponible sur http://localhost:3000 et le compte administrateur est cree
 automatiquement au premier demarrage a partir de `ADMIN_EMAIL` / `ADMIN_PASSWORD`.
 
 ## Developpement local
+
+Construire et lancer l'image localement (code source + `Dockerfile` requis) :
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
+```
+
+Sans Docker :
 
 ```bash
 npm install

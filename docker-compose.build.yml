@@ -1,0 +1,14 @@
+# Surcouche de developpement : construire l'image localement au lieu de la
+# tirer depuis GHCR. A utiliser uniquement sur une machine disposant du code
+# source et du Dockerfile.
+#   docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
+services:
+  app:
+    build:
+      context: .
+      target: runner
+
+  worker:
+    build:
+      context: .
+      target: runner
