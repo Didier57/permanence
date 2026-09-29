@@ -57,6 +57,10 @@ function escapeHtml(value: string): string {
     .replace(/"/g, "&quot;");
 }
 
+function telHref(value: string): string {
+  return `tel:${value.replace(/[^+0-9]/g, "")}`;
+}
+
 export type BuiltEmail = {
   subject: string;
   text: string;
@@ -91,6 +95,7 @@ type EmailStrings = {
   week: (weekNumber: number, start: string, end: string) => string;
   phoneLabel: string;
   phoneShort: string;
+  emailLabel: string;
   subject: (weekNumber: number, start: string, end: string, suffix: string) => string;
 };
 
@@ -100,6 +105,7 @@ const EMAIL_STRINGS: Record<Locale, EmailStrings> = {
     week: (weekNumber, start, end) => `Semaine ${weekNumber} du ${start} au ${end}`,
     phoneLabel: "Téléphone",
     phoneShort: "Tél.",
+    emailLabel: "Email",
     subject: (weekNumber, start, end, suffix) =>
       `Permanence semaine ${weekNumber} du ${start} à ${end}${suffix}`,
   },
@@ -108,6 +114,7 @@ const EMAIL_STRINGS: Record<Locale, EmailStrings> = {
     week: (weekNumber, start, end) => `Week ${weekNumber} from ${start} to ${end}`,
     phoneLabel: "Phone",
     phoneShort: "Phone",
+    emailLabel: "Email",
     subject: (weekNumber, start, end, suffix) =>
       `On-call schedule week ${weekNumber} from ${start} to ${end}${suffix}`,
   },
@@ -157,11 +164,14 @@ export function buildWeekEmail(
     text += `${htmlToPlainText(introHtml)}\n\n`;
   }
 
-  let html = `<!DOCTYPE html><html lang="${locale}"><head><meta charset="utf-8"></head><body style="font-family:Arial,Helvetica,sans-serif;color:#0f172a;">`;
-  html += `<h1 style="font-size:18px;">${strings.title}</h1>`;
-  html += `<p><strong>${strings.week(snapshot.weekNumber, startText, endText)}</strong></p>`;
+  let html = `<!DOCTYPE html><html lang="${locale}"><head><meta charset="utf-8"><title>${escapeHtml(subject)}</title>`;
+  html += `<style>@media print{@page{size:A4 portrait;margin:8mm;}body{margin:0;}table{font-size:9px;}}</style>`;
+  html += `</head><body style="margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;font-size:11px;line-height:1.3;color:#0f172a;">`;
+  html += `<div style="max-width:780px;">`;
+  html += `<h1 style="font-size:14px;margin:0 0 2px;">${strings.title}</h1>`;
+  html += `<p style="margin:0 0 6px;font-size:11px;"><strong>${strings.week(snapshot.weekNumber, startText, endText)}</strong></p>`;
   if (introHtml) {
-    html += `<div style="margin:16px 0;">${introHtml}</div>`;
+    html += `<div style="margin:6px 0;font-size:10px;">${introHtml}</div>`;
   }
 
   for (const group of groups) {
@@ -169,29 +179,36 @@ export function buildWeekEmail(
       ? `${group.groupName} (${group.groupDescription})`
       : group.groupName;
     text += `${groupTitle}\n`;
-    html += `<h2 style="font-size:15px;margin-bottom:4px;">${escapeHtml(groupTitle)}</h2>`;
-    html += `<table style="border-collapse:collapse;margin-bottom:12px;width:100%;">`;
+    html += `<div style="page-break-inside:avoid;">`;
+    html += `<h2 style="font-size:11px;margin:5px 0 1px;page-break-after:avoid;">${escapeHtml(groupTitle)}</h2>`;
+    html += `<table style="border-collapse:collapse;width:100%;font-size:10px;">`;
     for (const range of group.ranges) {
       const label = rangeLabel(days, range.start, range.end, locale);
-      const phone = range.entry.userProPhone ?? range.entry.userPrivatePhone ?? "—";
-      text += `${label} : ${range.entry.userName} — ${strings.phoneLabel} : ${phone} — Email : ${range.entry.userEmail}\n`;
+      const proPhone = range.entry.userProPhone;
+      const privatePhone = range.entry.userPrivatePhone;
+      const phone = proPhone ?? privatePhone ?? "—";
+      const phoneCell = proPhone || privatePhone
+        ? `<a href="${telHref(phone)}" style="color:#0369a1;text-decoration:none;">${escapeHtml(phone)}</a>`
+        : escapeHtml(phone);
+      const emailCell = range.entry.userEmail
+        ? `<a href="mailto:${escapeHtml(range.entry.userEmail)}" style="color:#0369a1;text-decoration:none;">${escapeHtml(range.entry.userEmail)}</a>`
+        : "—";
+      text += `${label} : ${range.entry.userName} — ${strings.phoneLabel} : ${phone} — ${strings.emailLabel} : ${range.entry.userEmail}\n`;
       html += `<tr>`;
-      html += `<td style="border:1px solid #e2e8f0;padding:6px;vertical-align:top;white-space:nowrap;">${escapeHtml(label)}</td>`;
-      html += `<td style="border:1px solid #e2e8f0;padding:6px;"><strong>${escapeHtml(range.entry.userName)}</strong><br>`;
-      html += `<span style="color:#64748b;">${strings.phoneShort} : ${escapeHtml(phone)}</span><br>`;
-      html += `<span style="color:#64748b;">${escapeHtml(range.entry.userEmail)}</span></td>`;
+      html += `<td style="border:1px solid #e2e8f0;padding:1px 5px;vertical-align:top;white-space:nowrap;">${escapeHtml(label)}</td>`;
+      html += `<td style="border:1px solid #e2e8f0;padding:1px 5px;vertical-align:top;"><strong>${escapeHtml(range.entry.userName)}</strong> — ${strings.phoneShort} : ${phoneCell} — ${strings.emailLabel} : ${emailCell}</td>`;
       html += `</tr>`;
     }
-    html += `</table>`;
+    html += `</table></div>`;
     text += `\n`;
   }
 
   if (outroHtml) {
     text += `${htmlToPlainText(outroHtml)}\n\n`;
-    html += `<div style="margin:16px 0;">${outroHtml}</div>`;
+    html += `<div style="margin:6px 0;font-size:10px;">${outroHtml}</div>`;
   }
 
-  html += `</body></html>`;
+  html += `</div></body></html>`;
 
   const recipients = [...new Set(snapshot.entries.map((entry) => entry.userEmail))].filter(Boolean);
 

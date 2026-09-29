@@ -151,6 +151,19 @@ describe("buildWeekEmail", () => {
     expect(email.html).toContain("jean@example.com");
   });
 
+  it("rend l'email et le telephone cliquables", () => {
+    expect(email.html).toContain('href="mailto:jean@example.com"');
+    expect(email.html).toContain('href="tel:0102030405"');
+    expect(email.html).toContain('href="tel:0607080910"');
+    expect(email.html).not.toContain("tel:—");
+  });
+
+  it("compacte la mise en page pour tenir sur une page A4 portrait", () => {
+    expect(email.html).toContain("@page{size:A4 portrait");
+    expect(email.html).toContain("font-size:10px;");
+    expect(email.html).not.toContain("font-size:18px");
+  });
+
   it("echappe les caracteres dangereux dans le HTML", () => {
     const dangerous = buildWeekEmail({
       ...snapshot,
