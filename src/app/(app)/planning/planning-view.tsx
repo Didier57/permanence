@@ -160,6 +160,11 @@ export function PlanningView({
     setActive(event.active.data.current as DragPayload);
   }
 
+  function isMemberOfGroup(userId: string, groupId: string): boolean {
+    const group = groups.find((item) => item.id === groupId);
+    return group ? group.members.some((member) => member.id === userId) : false;
+  }
+
   function handleDragEnd(event: DragEndEvent) {
     setActive(null);
     const payload = event.active.data.current as DragPayload | undefined;
@@ -170,6 +175,10 @@ export function PlanningView({
     if (!payload || !target) return;
     if (!canEdit) {
       setMessage({ tone: "error", text: "Seul un administrateur peut modifier le planning." });
+      return;
+    }
+    if (!isMemberOfGroup(payload.userId, target.type === "cell" ? target.groupId : payload.groupId)) {
+      setMessage({ tone: "error", text: "Cette personne n'appartient pas a ce groupe." });
       return;
     }
 
@@ -476,7 +485,10 @@ export function PlanningView({
                               <DropCell
                                 id={`cell:${key}:${group.id}`}
                                 data={{ type: "cell", date: key, groupId: group.id }}
-                                disabled={!canEdit}
+                                disabled={
+                                  !canEdit ||
+                                  (active !== null && !isMemberOfGroup(active.userId, group.id))
+                                }
                                 className={`min-h-[52px] rounded p-1 ${
                                   dateKey(day) === today ? "bg-sky-50/50" : ""
                                 }`}

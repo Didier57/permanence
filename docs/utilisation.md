@@ -53,6 +53,8 @@ repere dans le planning. Un groupe ayant des permanences ne peut pas etre suppri
 
 Le planning affiche a gauche la liste des groupes et de leurs membres, et a droite le calendrier.
 Toute personne affichee peut etre **glissee-deposee**.
+Une personne ne peut etre deposee que dans un groupe dont elle est **membre** : les cellules des
+autres groupes refusent le depot (et l'enregistrement est verifie cote serveur).
 
 ### Vue Semaine
 

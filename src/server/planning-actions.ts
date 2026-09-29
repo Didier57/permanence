@@ -48,6 +48,13 @@ async function guard(): Promise<{ id: string } | null> {
   }
 }
 
+async function isGroupMember(groupId: string, userId: string): Promise<boolean> {
+  const membership = await prisma.userGroup.findUnique({
+    where: { userId_groupId: { userId, groupId } },
+  });
+  return membership !== null;
+}
+
 export async function assignPermanence(input: {
   date: string;
   groupId: string;
@@ -62,6 +69,10 @@ export async function assignPermanence(input: {
   const { date, groupId, userId } = parsed.data;
   const day = fromDateInput(date);
   const { weekYear, weekNumber } = getISOWeekInfo(day);
+
+  if (!(await isGroupMember(groupId, userId))) {
+    return { ok: false, error: "Cette personne n'appartient pas a ce groupe." };
+  }
 
   try {
     const existing = await prisma.permanence.findUnique({
@@ -143,6 +154,10 @@ export async function fillWeek(input: {
   const { weekYear, weekNumber, groupId, userId } = parsed.data;
   const { start, end } = isoWeekRange(weekYear, weekNumber);
   const days = weekDays(start);
+
+  if (!(await isGroupMember(groupId, userId))) {
+    return { ok: false, error: "Cette personne n'appartient pas a ce groupe." };
+  }
 
   try {
     const existingCount = await prisma.permanence.count({
