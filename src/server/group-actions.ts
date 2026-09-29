@@ -62,11 +62,16 @@ export async function saveGroup(_prev: ActionState, formData: FormData): Promise
       }),
     ]);
   } else {
+    const last = await prisma.group.findFirst({
+      orderBy: [{ position: "desc" }, { name: "desc" }],
+      select: { position: true },
+    });
     await prisma.group.create({
       data: {
         name,
         description,
         color,
+        position: (last?.position ?? -1) + 1,
         members: { create: memberIds.map((userId) => ({ userId })) },
       },
     });
@@ -75,7 +80,36 @@ export async function saveGroup(_prev: ActionState, formData: FormData): Promise
   logger.info({ name, memberCount: memberIds.length }, "group.saved");
   revalidatePath("/groupes");
   revalidatePath("/personnel");
+  revalidatePath("/planning");
   return { ok: true, message: "Groupe enregistre." };
+}
+
+export async function moveGroup(formData: FormData): Promise<void> {
+  await requireManager();
+  const id = formData.get("id")?.toString();
+  const direction = formData.get("direction")?.toString();
+  if (!id || (direction !== "up" && direction !== "down")) return;
+
+  const groups = await prisma.group.findMany({
+    orderBy: [{ position: "asc" }, { name: "asc" }],
+    select: { id: true },
+  });
+  const index = groups.findIndex((group) => group.id === id);
+  const target = direction === "up" ? index - 1 : index + 1;
+  if (index < 0 || target < 0 || target >= groups.length) return;
+
+  const ordered = [...groups];
+  [ordered[index], ordered[target]] = [ordered[target], ordered[index]];
+  await prisma.$transaction(
+    ordered.map((group, position) =>
+      prisma.group.update({ where: { id: group.id }, data: { position } }),
+    ),
+  );
+
+  logger.info({ id, direction }, "group.moved");
+  revalidatePath("/groupes");
+  revalidatePath("/personnel");
+  revalidatePath("/planning");
 }
 
 export async function deleteGroup(formData: FormData): Promise<void> {
@@ -91,4 +125,5 @@ export async function deleteGroup(formData: FormData): Promise<void> {
   logger.info({ id }, "group.deleted");
   revalidatePath("/groupes");
   revalidatePath("/personnel");
+  revalidatePath("/planning");
 }

@@ -8,6 +8,7 @@ export type PlanningEntry = {
   groupName: string;
   groupDescription: string | null;
   groupColor: string | null;
+  groupPosition: number;
   userId: string;
   userName: string;
   userEmail: string;
@@ -44,7 +45,7 @@ export async function getWeekSnapshot(weekYear: number, weekNumber: number): Pro
   const permanences = await prisma.permanence.findMany({
     where: { date: { gte: start, lte: end } },
     include: { user: true, group: true },
-    orderBy: [{ date: "asc" }],
+    orderBy: [{ group: { position: "asc" } }, { date: "asc" }],
   });
 
   const entries: PlanningEntry[] = permanences.map((permanence) => ({
@@ -53,6 +54,7 @@ export async function getWeekSnapshot(weekYear: number, weekNumber: number): Pro
     groupName: permanence.group.name,
     groupDescription: permanence.group.description,
     groupColor: permanence.group.color,
+    groupPosition: permanence.group.position,
     userId: permanence.userId,
     userName: `${permanence.user.firstName} ${permanence.user.lastName}`,
     userEmail: permanence.user.email,

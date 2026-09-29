@@ -60,6 +60,7 @@ model Group {
   name        String   @unique
   description String?
   color       String?
+  position    Int      @default(0)
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 

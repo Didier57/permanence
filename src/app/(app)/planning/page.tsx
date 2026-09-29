@@ -39,7 +39,7 @@ export default async function PlanningPage({ searchParams }: PageProps<"/plannin
 
   const [groups, permanences, users] = await Promise.all([
     prisma.group.findMany({
-      orderBy: { name: "asc" },
+      orderBy: [{ position: "asc" }, { name: "asc" }],
       include: {
         members: {
           include: { user: { select: { id: true, firstName: true, lastName: true, active: true } } },

@@ -7,6 +7,7 @@ function entry(overrides: Partial<PlanningEntry> & Pick<PlanningEntry, "date" | 
     groupName: "Groupe",
     groupDescription: null,
     groupColor: null,
+    groupPosition: 0,
     userName: "Utilisateur",
     userEmail: "user@example.com",
     userProPhone: null,
@@ -49,6 +50,38 @@ const snapshot: WeekSnapshot = {
     }),
   ],
 };
+
+const orderedSnapshot: WeekSnapshot = {
+  weekYear: 2026,
+  weekNumber: 42,
+  weekStart: "2026-10-12",
+  weekEnd: "2026-10-18",
+  entries: [
+    entry({
+      date: "2026-10-12",
+      groupId: "g-zeta",
+      groupName: "Zeta",
+      groupPosition: 1,
+      userId: "u-jean",
+      userName: "Jean Dupont",
+    }),
+    entry({
+      date: "2026-10-12",
+      groupId: "g-alpha",
+      groupName: "Alpha",
+      groupPosition: 0,
+      userId: "u-pierre",
+      userName: "Pierre Martin",
+    }),
+  ],
+};
+
+describe("buildWeekEmail order", () => {
+  it("respecte la position des groupes", () => {
+    const email = buildWeekEmail(orderedSnapshot);
+    expect(email.html.indexOf("Alpha")).toBeLessThan(email.html.indexOf("Zeta"));
+  });
+});
 
 describe("buildWeekEmail", () => {
   const email = buildWeekEmail(snapshot);
@@ -160,7 +193,8 @@ describe("buildWeekEmail", () => {
 
   it("compacte la mise en page pour tenir sur une page A4 portrait", () => {
     expect(email.html).toContain("@page{size:A4 portrait");
-    expect(email.html).toContain("font-size:10px;");
+    expect(email.html).toContain("table{font-size:10px !important;");
+    expect(email.html).toContain("font-size:12px;");
     expect(email.html).not.toContain("font-size:18px");
   });
 

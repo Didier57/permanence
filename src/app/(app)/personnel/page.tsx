@@ -42,7 +42,10 @@ export default async function PersonnelPage({ searchParams }: PageProps<"/person
         _count: { select: { permanences: true } },
       },
     }),
-    prisma.group.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
+    prisma.group.findMany({
+      orderBy: [{ position: "asc" }, { name: "asc" }],
+      select: { id: true, name: true },
+    }),
   ]);
 
   const userViews: UserView[] = users.map((user) => ({

@@ -89,7 +89,7 @@ export async function createBackup(): Promise<BackupData> {
   ] = await Promise.all([
     prisma.user.findMany({ orderBy: [{ lastName: "asc" }, { firstName: "asc" }] }),
     prisma.account.findMany({ orderBy: { email: "asc" } }),
-    prisma.group.findMany({ orderBy: { name: "asc" } }),
+    prisma.group.findMany({ orderBy: [{ position: "asc" }, { name: "asc" }] }),
     prisma.userGroup.findMany({ orderBy: { createdAt: "asc" } }),
     prisma.permanence.findMany({ orderBy: [{ date: "asc" }, { groupId: "asc" }] }),
     prisma.emailConfiguration.findUnique({ where: { id: "default" } }),
@@ -128,6 +128,7 @@ export async function createBackup(): Promise<BackupData> {
       name: group.name,
       description: group.description,
       color: group.color,
+      position: group.position,
       createdAt: group.createdAt.toISOString(),
       updatedAt: group.updatedAt.toISOString(),
     })),
@@ -215,6 +216,7 @@ const backupSchema = z.object({
         name: z.string().min(1),
         description: z.string().nullish(),
         color: z.string().nullish(),
+        position: z.number().int().nullish(),
         createdAt: z.string().optional(),
         updatedAt: z.string().optional(),
       }),
@@ -341,6 +343,7 @@ export async function restoreBackup(input: unknown, mode: RestoreMode): Promise<
               name: group.name,
               description: group.description ?? null,
               color: group.color ?? null,
+              position: group.position ?? 0,
               createdAt: optionalDate(group.createdAt) ?? undefined,
             },
           });
@@ -393,6 +396,7 @@ export async function restoreBackup(input: unknown, mode: RestoreMode): Promise<
                 name: group.name,
                 description: group.description ?? null,
                 color: group.color ?? null,
+                position: group.position ?? 0,
               },
             });
             groupIdMap.set(group.id, existing.id);
@@ -403,6 +407,7 @@ export async function restoreBackup(input: unknown, mode: RestoreMode): Promise<
                 name: group.name,
                 description: group.description ?? null,
                 color: group.color ?? null,
+                position: group.position ?? 0,
                 createdAt: optionalDate(group.createdAt) ?? undefined,
               },
             });

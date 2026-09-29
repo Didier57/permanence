@@ -6,6 +6,7 @@ function entry(overrides: Partial<PlanningEntry> & Pick<PlanningEntry, "date" | 
     groupName: "Groupe",
     groupDescription: null,
     groupColor: null,
+    groupPosition: 0,
     userName: "Utilisateur",
     userEmail: "user@example.com",
     userProPhone: null,

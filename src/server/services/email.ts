@@ -153,10 +153,11 @@ export function buildWeekEmail(
       return {
         groupName: entries[0]?.groupName ?? "",
         groupDescription: entries[0]?.groupDescription ?? null,
+        position: entries[0]?.groupPosition ?? 0,
         ranges: compressDays(dayKeys.map((key) => byDate.get(key))),
       };
     })
-    .sort((a, b) => a.groupName.localeCompare(b.groupName, "fr"));
+    .sort((a, b) => a.position - b.position || a.groupName.localeCompare(b.groupName, "fr"));
 
   let text = `${strings.title}\n`;
   text += `${strings.week(snapshot.weekNumber, startText, endText)}\n\n`;
@@ -165,13 +166,13 @@ export function buildWeekEmail(
   }
 
   let html = `<!DOCTYPE html><html lang="${locale}"><head><meta charset="utf-8"><title>${escapeHtml(subject)}</title>`;
-  html += `<style>@media print{@page{size:A4 portrait;margin:8mm;}body{margin:0;}table{font-size:9px;}}</style>`;
-  html += `</head><body style="margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;font-size:11px;line-height:1.3;color:#0f172a;">`;
+  html += `<style>@media print{@page{size:A4 portrait;margin:8mm;}body{margin:0;}table{font-size:10px !important;}}</style>`;
+  html += `</head><body style="margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.35;color:#0f172a;">`;
   html += `<div style="max-width:780px;">`;
-  html += `<h1 style="font-size:14px;margin:0 0 2px;">${strings.title}</h1>`;
-  html += `<p style="margin:0 0 6px;font-size:11px;"><strong>${strings.week(snapshot.weekNumber, startText, endText)}</strong></p>`;
+  html += `<h1 style="font-size:17px;margin:0 0 3px;">${strings.title}</h1>`;
+  html += `<p style="margin:0 0 8px;font-size:13px;"><strong>${strings.week(snapshot.weekNumber, startText, endText)}</strong></p>`;
   if (introHtml) {
-    html += `<div style="margin:6px 0;font-size:10px;">${introHtml}</div>`;
+    html += `<div style="margin:8px 0;font-size:12px;">${introHtml}</div>`;
   }
 
   for (const group of groups) {
@@ -180,8 +181,8 @@ export function buildWeekEmail(
       : group.groupName;
     text += `${groupTitle}\n`;
     html += `<div style="page-break-inside:avoid;">`;
-    html += `<h2 style="font-size:11px;margin:5px 0 1px;page-break-after:avoid;">${escapeHtml(groupTitle)}</h2>`;
-    html += `<table style="border-collapse:collapse;width:100%;font-size:10px;">`;
+    html += `<h2 style="font-size:13px;margin:8px 0 2px;page-break-after:avoid;">${escapeHtml(groupTitle)}</h2>`;
+    html += `<table style="border-collapse:collapse;width:100%;font-size:12px;">`;
     for (const range of group.ranges) {
       const label = rangeLabel(days, range.start, range.end, locale);
       const proPhone = range.entry.userProPhone;
@@ -195,8 +196,8 @@ export function buildWeekEmail(
         : "—";
       text += `${label} : ${range.entry.userName} — ${strings.phoneLabel} : ${phone} — ${strings.emailLabel} : ${range.entry.userEmail}\n`;
       html += `<tr>`;
-      html += `<td style="border:1px solid #e2e8f0;padding:1px 5px;vertical-align:top;white-space:nowrap;">${escapeHtml(label)}</td>`;
-      html += `<td style="border:1px solid #e2e8f0;padding:1px 5px;vertical-align:top;"><strong>${escapeHtml(range.entry.userName)}</strong> — ${strings.phoneShort} : ${phoneCell} — ${strings.emailLabel} : ${emailCell}</td>`;
+      html += `<td style="border:1px solid #e2e8f0;padding:2px 6px;vertical-align:top;white-space:nowrap;">${escapeHtml(label)}</td>`;
+      html += `<td style="border:1px solid #e2e8f0;padding:2px 6px;vertical-align:top;"><strong>${escapeHtml(range.entry.userName)}</strong> — ${strings.phoneShort} : ${phoneCell} — ${strings.emailLabel} : ${emailCell}</td>`;
       html += `</tr>`;
     }
     html += `</table></div>`;
@@ -205,7 +206,7 @@ export function buildWeekEmail(
 
   if (outroHtml) {
     text += `${htmlToPlainText(outroHtml)}\n\n`;
-    html += `<div style="margin:6px 0;font-size:10px;">${outroHtml}</div>`;
+    html += `<div style="margin:8px 0;font-size:12px;">${outroHtml}</div>`;
   }
 
   html += `</div></body></html>`;

@@ -259,6 +259,9 @@ export const EN_MESSAGES: Record<string, string> = {
   "Creneau desactive": "Slot disabled",
   Jamais: "Never",
   "Semaine {week}/{year}": "Week {week}/{year}",
+  Ordre: "Order",
+  Monter: "Move up",
+  Descendre: "Move down",
   "Fuseau horaire": "Time zone",
   "Modele du message": "Message template",
   "Ces textes sont inseres dans l'email, au-dessus puis en dessous du planning. Laissez vide pour ne rien ajouter.":
