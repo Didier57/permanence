@@ -13,8 +13,9 @@
 | `ADMIN_PASSWORD` | non | Mot de passe du compte admin cree au premier demarrage. |
 | `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | non | Identifiants de la base dans `docker-compose.yml`. |
 | `APP_PORT` | non | Port HTTP expose (defaut `3000`). |
-| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM`, `SMTP_ENCRYPTION` | non | Surchargent la configuration SMTP enregistree dans l'interface. |
 | `RUN_MIGRATIONS`, `RUN_SEED` | non | Controle l'application des migrations et du seed par l'entrypoint (`true` pour `app`). |
+
+Aucune variable d'environnement SMTP : la configuration SMTP se fait uniquement dans l'interface (menu **Emails**).
 
 ## Configuration SMTP
 

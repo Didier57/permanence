@@ -36,12 +36,6 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-info}
       RUN_MIGRATIONS: "true"
       RUN_SEED: "true"
-      SMTP_HOST: ${SMTP_HOST:-}
-      SMTP_PORT: ${SMTP_PORT:-}
-      SMTP_USER: ${SMTP_USER:-}
-      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
-      SMTP_FROM: ${SMTP_FROM:-}
-      SMTP_ENCRYPTION: ${SMTP_ENCRYPTION:-}
     ports:
       - "${APP_PORT:-3000}:3000"
     depends_on:
@@ -75,12 +69,6 @@ services:
       TIMEZONE: ${TIMEZONE:-Europe/Paris}
       LOG_LEVEL: ${LOG_LEVEL:-info}
       RUN_MIGRATIONS: "false"
-      SMTP_HOST: ${SMTP_HOST:-}
-      SMTP_PORT: ${SMTP_PORT:-}
-      SMTP_USER: ${SMTP_USER:-}
-      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
-      SMTP_FROM: ${SMTP_FROM:-}
-      SMTP_ENCRYPTION: ${SMTP_ENCRYPTION:-}
     depends_on:
       db:
         condition: service_healthy

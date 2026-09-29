@@ -27,14 +27,12 @@ export function resolveSmtpSettings(config: {
   smtpUser: string | null;
   smtpPasswordEncrypted: string | null;
 }): SmtpSettings {
-  const encryption = (process.env.SMTP_ENCRYPTION as SmtpEncryption | undefined) ??
-    (config.smtpEncryption as SmtpEncryption);
   return {
-    host: process.env.SMTP_HOST || config.smtpHost,
-    port: Number(process.env.SMTP_PORT || config.smtpPort),
-    encryption,
-    user: process.env.SMTP_USER ?? config.smtpUser,
-    password: process.env.SMTP_PASSWORD ?? decryptSecret(config.smtpPasswordEncrypted),
+    host: config.smtpHost,
+    port: Number(config.smtpPort),
+    encryption: config.smtpEncryption as SmtpEncryption,
+    user: config.smtpUser,
+    password: decryptSecret(config.smtpPasswordEncrypted),
   };
 }
 
@@ -135,10 +133,7 @@ export async function sendWeekEmail(options: {
     return { ok: false, error: "Aucun destinataire identifié." };
   }
 
-  const from = formatFromAddress(
-    process.env.SMTP_FROM || config.fromAddress,
-    config.fromName,
-  );
+  const from = formatFromAddress(config.fromAddress, config.fromName);
   const cc = config.ccRecipients.filter(Boolean);
   const weekStart = fromDateInput(snapshot.weekStart);
   const weekEnd = fromDateInput(snapshot.weekEnd);
@@ -234,7 +229,7 @@ export async function sendTestEmail(to: string): Promise<{ ok: boolean; error?: 
   try {
     await verifyTransport(transport);
     await sendMail(transport, {
-      from: formatFromAddress(process.env.SMTP_FROM || config.fromAddress, config.fromName),
+      from: formatFromAddress(config.fromAddress, config.fromName),
       to,
       replyTo: config.replyTo ?? undefined,
       subject: "Test de configuration SMTP - Permanence",
