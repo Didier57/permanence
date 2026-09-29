@@ -3,10 +3,12 @@ import { PageHeader } from "@/components/page-header";
 import { T } from "@/components/locale-provider";
 import { Card } from "@/components/ui";
 import { getCurrentAccount, isManagerRole } from "@/lib/auth";
-import { dateKey, toUTCDateOnly } from "@/lib/date";
+import { addDays, dateKey, fromDateInput, toUTCDateOnly } from "@/lib/date";
 import { prisma } from "@/lib/db";
+import { slotOccurrence, targetWeek } from "@/worker/schedule";
 import { EmailConfigForm, type EmailConfigView } from "./email-config-form";
 import { ManualSendForm } from "./manual-send-form";
+import { SchedulerStatus, FRESH_MINUTES, type SchedulerSlotView } from "./scheduler-status";
 
 export const metadata = { title: "Emails / SMTP - Permanence" };
 
@@ -71,6 +73,48 @@ export default async function EmailsPage() {
         schedules: scheduleRows.length > 0 ? scheduleRows : EMPTY_CONFIG.schedules,
       };
 
+  const now = new Date();
+
+  const lastAutomaticBySlot = new Map<string, { sentAt: Date; status: string }>();
+  if (isAdmin && schedules.length > 0) {
+    const recent = await prisma.emailHistory.findMany({
+      where: { type: "AUTOMATIC", scheduleId: { in: schedules.map((schedule) => schedule.id) } },
+      orderBy: { sentAt: "desc" },
+      take: 200,
+      select: { scheduleId: true, sentAt: true, status: true },
+    });
+    for (const entry of recent) {
+      if (entry.scheduleId && !lastAutomaticBySlot.has(entry.scheduleId)) {
+        lastAutomaticBySlot.set(entry.scheduleId, { sentAt: entry.sentAt, status: entry.status });
+      }
+    }
+  }
+
+  const schedulerSlots: SchedulerSlotView[] = isAdmin
+    ? schedules.map((schedule) => {
+        const occurrence = slotOccurrence(schedule, config.timezone, now);
+        const next = occurrence
+          ? occurrence.offsetMinutes > 0
+            ? addDays(fromDateInput(occurrence.dateKey), 7)
+            : fromDateInput(occurrence.dateKey)
+          : null;
+        const nextKey = next ? dateKey(next) : null;
+        const last = lastAutomaticBySlot.get(schedule.id);
+        return {
+          id: schedule.id,
+          dayOfWeek: schedule.dayOfWeek,
+          sendTime: schedule.sendTime,
+          weekOffset: schedule.weekOffset,
+          enabled: schedule.enabled,
+          nextDateKey: nextKey,
+          nextWeek: nextKey ? targetWeek(nextKey, schedule.weekOffset) : null,
+          lastSentAt: last ? last.sentAt.toISOString() : null,
+          lastSentStatus: last ? last.status : null,
+          lastSentPartial: false,
+        };
+      })
+    : [];
+
   const today = dateKey(toUTCDateOnly(new Date()));
 
   return (
@@ -93,6 +137,21 @@ export default async function EmailsPage() {
             </h2>
             <EmailConfigForm config={config} accountEmail={account.email} />
           </Card>
+        ) : null}
+
+        {isAdmin ? (
+          <SchedulerStatus
+            status={{
+              timezone: config.timezone,
+              enabled: config.enabled,
+              lastTickAt: record?.lastTickAt ? record.lastTickAt.toISOString() : null,
+              lastTickStatus: record?.lastTickStatus ?? null,
+              fresh: record?.lastTickAt
+                ? (now.getTime() - record.lastTickAt.getTime()) / 60000 <= FRESH_MINUTES
+                : false,
+              slots: schedulerSlots,
+            }}
+          />
         ) : null}
 
         <Card className="p-6">

@@ -3,7 +3,7 @@ import cron from "node-cron";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { getEmailConfig, sendWeekEmail } from "@/server/services/email";
-import { findDueSlots } from "./schedule";
+import { DEFAULT_CATCH_UP_MINUTES, findDueSlots, findMissedSlots } from "./schedule";
 
 export type TickResult = {
   status: "disabled" | "done";
@@ -14,19 +14,29 @@ export type TickResult = {
   details: { weekYear: number; weekNumber: number; recipientCount?: number }[];
 };
 
-export async function runTick(reference: Date = new Date()): Promise<TickResult> {
+export type TickOptions = {
+  /**
+   * Fenetre (minutes) pendant laquelle un declenchement manque est rattrape au
+   * demarrage du worker. 0 desactive le rattrapage.
+   */
+  catchUpMinutes?: number;
+};
+
+export async function runTick(
+  reference: Date = new Date(),
+  options: TickOptions = {},
+): Promise<TickResult> {
   const config = await getEmailConfig();
   const result: TickResult = { status: "done", sent: 0, skipped: 0, empty: 0, errors: [], details: [] };
   if (!config) return { ...result, status: "disabled" };
 
+  const scope = { enabled: config.enabled, timezone: config.timezone };
   const slots = await prisma.emailSchedule.findMany({
     orderBy: [{ dayOfWeek: "asc" }, { sendTime: "asc" }],
   });
-  const due = findDueSlots(
-    slots,
-    { enabled: config.enabled, timezone: config.timezone },
-    reference,
-  );
+  const catchUpMinutes = options.catchUpMinutes ?? 0;
+  const catchUp = catchUpMinutes > 0 ? findMissedSlots(slots, scope, reference, catchUpMinutes) : [];
+  const due = [...findDueSlots(slots, scope, reference), ...catchUp];
 
   for (const item of due) {
     const alreadySent = await prisma.emailHistory.findFirst({
@@ -73,14 +83,27 @@ export async function runTick(reference: Date = new Date()): Promise<TickResult>
 
 let running = false;
 
-async function safeTick(): Promise<void> {
+/** Enregistre le passage du worker pour que l'interface puisse le verifier. */
+async function recordHeartbeat(status: string): Promise<void> {
+  try {
+    await prisma.emailConfiguration.updateMany({
+      where: { id: "default" },
+      data: { lastTickAt: new Date(), lastTickStatus: status },
+    });
+  } catch (error) {
+    logger.error({ err: error }, "scheduler.heartbeat.error");
+  }
+}
+
+async function safeTick(options: TickOptions = {}): Promise<void> {
   if (running) {
     logger.warn({}, "scheduler.tick.skipped");
     return;
   }
   running = true;
   try {
-    const result = await runTick();
+    const result = await runTick(new Date(), options);
+    await recordHeartbeat(result.status);
     if (result.status === "disabled") return;
     if (result.errors.length > 0) {
       logger.error({ errors: result.errors }, "scheduler.tick.error");
@@ -91,6 +114,7 @@ async function safeTick(): Promise<void> {
           sent: result.sent,
           skipped: result.skipped,
           empty: result.empty,
+          catchUp: options.catchUpMinutes ?? 0,
           details: result.details,
         },
         "scheduler.tick.sent",
@@ -98,6 +122,7 @@ async function safeTick(): Promise<void> {
     }
   } catch (error) {
     logger.error({ err: error }, "scheduler.tick.exception");
+    await recordHeartbeat("error");
   } finally {
     running = false;
   }
@@ -113,13 +138,16 @@ async function main(): Promise<void> {
   const once = process.argv.includes("--once") || process.env.WORKER_RUN_ONCE === "true";
 
   if (once) {
-    const result = await runTick();
+    const result = await runTick(new Date(), { catchUpMinutes: DEFAULT_CATCH_UP_MINUTES });
+    await recordHeartbeat(result.status);
     logger.info({ result }, "scheduler.once");
     await prisma.$disconnect();
     return;
   }
 
   logger.info({}, "scheduler.started");
+  // Controle immediat au demarrage, avec rattrapage des envois manques.
+  void safeTick({ catchUpMinutes: DEFAULT_CATCH_UP_MINUTES });
   cron.schedule("* * * * *", () => {
     void safeTick();
   });

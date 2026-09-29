@@ -1,4 +1,4 @@
-import { addDays, getISOWeekInfo } from "@/lib/date";
+import { addDays, dateKey, fromDateInput, getISOWeekInfo } from "@/lib/date";
 
 const WEEKDAY_INDEX: Record<string, number> = {
   Sun: 0,
@@ -70,24 +70,77 @@ export type ScheduleDecision =
   | { status: "not-due" }
   | { status: "due"; weekYear: number; weekNumber: number };
 
+export type SlotOccurrence = {
+  /** Date locale (YYYY-MM-DD) du declenchement le plus proche. */
+  dateKey: string;
+  hour: number;
+  minute: number;
+  /**
+   * Minutes ecoulees depuis ce declenchement le plus proche :
+   * 0 = a l'instant prevu, negatif = declenchement encore a venir.
+   */
+  offsetMinutes: number;
+};
+
 /**
- * Determine si l'envoi automatique doit se declencher pour l'instant fourni,
- * ainsi que la semaine visee : la semaine suivante par defaut, ou la semaine en
- * cours du jour d'envoi lorsque `weekOffset` vaut 0.
+ * Declenchement le plus proche d'un creneau, exprime dans le fuseau configure.
+ * Le calcul reste en heure locale (mur) : les changements d'heure n'ont aucune
+ * incidence sur le jour et l'heure choisis.
+ */
+export function slotOccurrence(
+  slot: { dayOfWeek: number; sendTime: string },
+  timezone: string,
+  reference: Date,
+): SlotOccurrence | null {
+  const send = parseSendTime(slot.sendTime);
+  if (!send) return null;
+
+  const zoned = getZonedParts(reference, timezone);
+  const currentMinuteOfDay = zoned.hour * 60 + zoned.minute;
+  const scheduledMinuteOfDay = send.hour * 60 + send.minute;
+  const dayGap = (((slot.dayOfWeek % 7) + 7) % 7) - zoned.weekday + 7;
+  let offsetMinutes = (dayGap % 7) * 1440 + (scheduledMinuteOfDay - currentMinuteOfDay);
+  if (offsetMinutes > 5040) offsetMinutes -= 10080;
+
+  const dayOffset = Math.floor((currentMinuteOfDay + offsetMinutes) / 1440);
+  const localDate = new Date(Date.UTC(zoned.year, zoned.month - 1, zoned.day));
+  return {
+    dateKey: dateKey(addDays(localDate, dayOffset)),
+    hour: send.hour,
+    minute: send.minute,
+    offsetMinutes,
+  };
+}
+
+/**
+ * Determine si l'envoi automatique doit se declencher maintenant pour le
+ * creneau fourni, ainsi que la semaine visee : la semaine suivante par defaut,
+ * ou la semaine en cours du jour d'envoi lorsque `weekOffset` vaut 0.
  */
 export function decideSchedule(config: ScheduleConfig, reference: Date): ScheduleDecision {
   if (!config.enabled) return { status: "disabled" };
 
-  const send = parseSendTime(config.sendTime);
-  if (!send) return { status: "invalid-time" };
+  const occurrence = slotOccurrence(
+    { dayOfWeek: config.sendDayOfWeek, sendTime: config.sendTime },
+    config.timezone,
+    reference,
+  );
+  if (!occurrence) return { status: "invalid-time" };
+  if (occurrence.offsetMinutes !== 0) return { status: "not-due" };
 
-  const zoned = getZonedParts(reference, config.timezone);
-  if (zoned.weekday !== config.sendDayOfWeek) return { status: "not-due" };
-  if (zoned.hour !== send.hour || zoned.minute !== send.minute) return { status: "not-due" };
+  return {
+    status: "due",
+    ...targetWeek(occurrence.dateKey, config.weekOffset ?? 1),
+  };
+}
 
-  const localDate = new Date(Date.UTC(zoned.year, zoned.month - 1, zoned.day));
-  const { weekYear, weekNumber } = getISOWeekInfo(addDays(localDate, 7 * (config.weekOffset ?? 1)));
-  return { status: "due", weekYear, weekNumber };
+/** Semaine visee pour un declenchement tombe a la date locale fournie. */
+export function targetWeek(
+  dateKey: string,
+  weekOffset: number,
+): { weekYear: number; weekNumber: number } {
+  const { weekYear, weekNumber } = getISOWeekInfo(addDays(fromDateInput(dateKey), 7 * weekOffset));
+  return { weekYear, weekNumber };
 }
 
 export type ScheduleSlot = {
@@ -100,6 +153,9 @@ export type ScheduleSlot = {
 
 export type DueSlot = { id: string; weekYear: number; weekNumber: number };
 
+/** Fenetre de rattrapage par defaut (minutes) appliquee au demarrage du worker. */
+export const DEFAULT_CATCH_UP_MINUTES = 720;
+
 /**
  * Liste les creneaux a traiter pour l'instant fourni. Chaque creneau est
  * independant : deux creneaux peuvent viser la meme semaine.
@@ -109,24 +165,42 @@ export function findDueSlots(
   config: { enabled: boolean; timezone: string },
   reference: Date,
 ): DueSlot[] {
+  return selectSlots(slots, config, reference, (offsetMinutes) => offsetMinutes === 0);
+}
+
+/**
+ * Creneaux dont le declenchement a ete manque depuis moins de `windowMinutes`.
+ * Utilise au demarrage du worker : un redemarrage (ou une coupure) juste apres
+ * l'heure prevue ne doit pas faire perdre l'envoi de la semaine.
+ */
+export function findMissedSlots(
+  slots: ScheduleSlot[],
+  config: { enabled: boolean; timezone: string },
+  reference: Date,
+  windowMinutes: number = DEFAULT_CATCH_UP_MINUTES,
+): DueSlot[] {
+  return selectSlots(
+    slots,
+    config,
+    reference,
+    (offsetMinutes) => offsetMinutes < 0 && -offsetMinutes <= windowMinutes,
+  );
+}
+
+function selectSlots(
+  slots: ScheduleSlot[],
+  config: { enabled: boolean; timezone: string },
+  reference: Date,
+  matches: (offsetMinutes: number) => boolean,
+): DueSlot[] {
   if (!config.enabled) return [];
 
   const due: DueSlot[] = [];
   for (const slot of slots) {
     if (!slot.enabled) continue;
-    const decision = decideSchedule(
-      {
-        enabled: true,
-        timezone: config.timezone,
-        sendDayOfWeek: slot.dayOfWeek,
-        sendTime: slot.sendTime,
-        weekOffset: slot.weekOffset,
-      },
-      reference,
-    );
-    if (decision.status === "due") {
-      due.push({ id: slot.id, weekYear: decision.weekYear, weekNumber: decision.weekNumber });
-    }
+    const occurrence = slotOccurrence(slot, config.timezone, reference);
+    if (!occurrence || !matches(occurrence.offsetMinutes)) continue;
+    due.push({ id: slot.id, ...targetWeek(occurrence.dateKey, slot.weekOffset) });
   }
   return due;
 }

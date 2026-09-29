@@ -176,6 +176,9 @@ model EmailConfiguration {
   enabled               Boolean        @default(false)
   introHtml             String?        @map("intro_html")
   outroHtml             String?        @map("outro_html")
+  /// Dernier passage du worker de planification (surveillance).
+  lastTickAt            DateTime?      @map("last_tick_at")
+  lastTickStatus        String?        @map("last_tick_status")
   createdAt             DateTime       @default(now()) @map("created_at")
   updatedAt             DateTime       @updatedAt @map("updated_at")
 

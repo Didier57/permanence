@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { decideSchedule, findDueSlots, getZonedParts, parseSendTime } from "./schedule";
+import {
+  decideSchedule,
+  findDueSlots,
+  findMissedSlots,
+  getZonedParts,
+  parseSendTime,
+  slotOccurrence,
+} from "./schedule";
 
 describe("parseSendTime", () => {
   it("accepte une heure valide", () => {
@@ -131,5 +138,76 @@ describe("findDueSlots", () => {
 
   it("ignore un creneau desactive", () => {
     expect(findDueSlots(slots, config, new Date("2026-10-15T07:00:00Z"))).toEqual([]);
+  });
+});
+
+describe("slotOccurrence", () => {
+  const slot = { dayOfWeek: 3, sendTime: "09:00" };
+
+  it("renvoie l'instant prevu quand l'heure correspond", () => {
+    const occurrence = slotOccurrence(slot, "Europe/Paris", new Date("2026-10-14T07:00:00Z"));
+    expect(occurrence).toEqual({
+      dateKey: "2026-10-14",
+      hour: 9,
+      minute: 0,
+      offsetMinutes: 0,
+    });
+  });
+
+  it("indique un retard de quelques minutes", () => {
+    const occurrence = slotOccurrence(slot, "Europe/Paris", new Date("2026-10-14T07:01:30Z"));
+    expect(occurrence?.offsetMinutes).toBe(-1);
+    expect(occurrence?.dateKey).toBe("2026-10-14");
+  });
+
+  it("indique un declenchement a venir", () => {
+    const occurrence = slotOccurrence(slot, "Europe/Paris", new Date("2026-10-14T06:00:00Z"));
+    expect(occurrence?.offsetMinutes).toBe(60);
+    expect(occurrence?.dateKey).toBe("2026-10-14");
+  });
+
+  it("remonte au jour precedent pour un declenchement manque de la veille", () => {
+    const occurrence = slotOccurrence(slot, "Europe/Paris", new Date("2026-10-15T07:00:00Z"));
+    expect(occurrence?.offsetMinutes).toBe(-1440);
+    expect(occurrence?.dateKey).toBe("2026-10-14");
+  });
+
+  it("gere un creneau en fin de journee vu depuis le lendemain matin", () => {
+    const occurrence = slotOccurrence(
+      { dayOfWeek: 0, sendTime: "23:30" },
+      "Europe/Paris",
+      new Date("2026-10-18T22:10:00Z"),
+    );
+    expect(occurrence?.offsetMinutes).toBe(-40);
+    expect(occurrence?.dateKey).toBe("2026-10-18");
+  });
+
+  it("refuse une heure invalide", () => {
+    expect(slotOccurrence({ dayOfWeek: 1, sendTime: "99:99" }, "Europe/Paris", new Date())).toBeNull();
+  });
+});
+
+describe("findMissedSlots", () => {
+  const config = { enabled: true, timezone: "Europe/Paris" };
+  const slots = [
+    { id: "lundi-matin", dayOfWeek: 1, sendTime: "09:00", weekOffset: 0, enabled: true },
+    { id: "mercredi", dayOfWeek: 3, sendTime: "09:00", weekOffset: 1, enabled: true },
+    { id: "jeudi-desactive", dayOfWeek: 4, sendTime: "09:00", weekOffset: 1, enabled: false },
+  ];
+
+  it("rattrape un declenchement de la veille dans la fenetre", () => {
+    expect(findMissedSlots(slots, config, new Date("2026-10-15T07:00:00Z"), 1440)).toEqual([
+      { id: "mercredi", weekYear: 2026, weekNumber: 43 },
+    ]);
+  });
+
+  it("ignore ce qui est plus vieux que la fenetre", () => {
+    expect(findMissedSlots(slots, config, new Date("2026-10-15T07:00:00Z"), 720)).toEqual([]);
+  });
+
+  it("ne rattrape rien quand l'envoi automatique est desactive", () => {
+    expect(
+      findMissedSlots(slots, { ...config, enabled: false }, new Date("2026-10-15T07:00:00Z"), 1440),
+    ).toEqual([]);
   });
 });
