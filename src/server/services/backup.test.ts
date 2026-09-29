@@ -52,8 +52,41 @@ describe("parseBackup", () => {
     expect(parsed.emailConfiguration?.ccRecipients).toEqual([]);
   });
 
-  it("accepte un compte d'acces avec son empreinte de mot de passe", () => {
+  it("accepte plusieurs creneaux d'envoi", () => {
     const parsed = parseBackup({
+      emailConfiguration: {
+        smtpHost: "smtp.example.com",
+        smtpPort: 587,
+        fromAddress: "permanence@example.com",
+        enabled: true,
+        schedules: [
+          { dayOfWeek: 1, sendTime: "08:00", weekOffset: 0, enabled: true },
+          { dayOfWeek: 3, sendTime: "09:00" },
+        ],
+      },
+    });
+    expect(parsed.emailConfiguration?.schedules).toHaveLength(2);
+    expect(parsed.emailConfiguration?.schedules?.[0]?.weekOffset).toBe(0);
+    expect(parsed.emailConfiguration?.schedules?.[1]?.weekOffset).toBe(1);
+    expect(parsed.emailConfiguration?.schedules?.[1]?.enabled).toBe(true);
+  });
+
+  it("accepte un ancien fichier avec un seul jour et une seule heure", () => {
+    const parsed = parseBackup({
+      emailConfiguration: {
+        smtpHost: "smtp.example.com",
+        smtpPort: 587,
+        fromAddress: "permanence@example.com",
+        sendDayOfWeek: 5,
+        sendTime: "18:30",
+      },
+    });
+    expect(parsed.emailConfiguration?.sendDayOfWeek).toBe(5);
+    expect(parsed.emailConfiguration?.sendTime).toBe("18:30");
+    expect(parsed.emailConfiguration?.schedules).toBeUndefined();
+  });
+
+  it("accepte un compte d'acces avec son empreinte de mot de passe", () => {    const parsed = parseBackup({
       accounts: [
         {
           email: "didier@macchi.fr",

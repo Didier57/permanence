@@ -4,7 +4,7 @@ import { fromDateInput, dateKey, getISOWeekInfo, toUTCDateOnly } from "@/lib/dat
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
 
-export const BACKUP_VERSION = 1;
+export const BACKUP_VERSION = 2;
 
 export type BackupData = {
   version: number;
@@ -61,8 +61,13 @@ export type BackupData = {
     fromName: string | null;
     replyTo: string | null;
     ccRecipients: string[];
-    sendDayOfWeek: number;
-    sendTime: string;
+    schedules: {
+      id: string;
+      dayOfWeek: number;
+      sendTime: string;
+      weekOffset: number;
+      enabled: boolean;
+    }[];
     timezone: string;
     enabled: boolean;
     introHtml: string | null;
@@ -72,16 +77,25 @@ export type BackupData = {
 };
 
 export async function createBackup(): Promise<BackupData> {
-  const [users, accounts, groups, memberships, permanences, emailConfiguration, appConfiguration] =
-    await Promise.all([
-      prisma.user.findMany({ orderBy: [{ lastName: "asc" }, { firstName: "asc" }] }),
-      prisma.account.findMany({ orderBy: { email: "asc" } }),
-      prisma.group.findMany({ orderBy: { name: "asc" } }),
-      prisma.userGroup.findMany({ orderBy: { createdAt: "asc" } }),
-      prisma.permanence.findMany({ orderBy: [{ date: "asc" }, { groupId: "asc" }] }),
-      prisma.emailConfiguration.findUnique({ where: { id: "default" } }),
-      prisma.appConfiguration.findUnique({ where: { id: "default" } }),
-    ]);
+  const [
+    users,
+    accounts,
+    groups,
+    memberships,
+    permanences,
+    emailConfiguration,
+    emailSchedules,
+    appConfiguration,
+  ] = await Promise.all([
+    prisma.user.findMany({ orderBy: [{ lastName: "asc" }, { firstName: "asc" }] }),
+    prisma.account.findMany({ orderBy: { email: "asc" } }),
+    prisma.group.findMany({ orderBy: { name: "asc" } }),
+    prisma.userGroup.findMany({ orderBy: { createdAt: "asc" } }),
+    prisma.permanence.findMany({ orderBy: [{ date: "asc" }, { groupId: "asc" }] }),
+    prisma.emailConfiguration.findUnique({ where: { id: "default" } }),
+    prisma.emailSchedule.findMany({ orderBy: [{ dayOfWeek: "asc" }, { sendTime: "asc" }] }),
+    prisma.appConfiguration.findUnique({ where: { id: "default" } }),
+  ]);
 
   return {
     version: BACKUP_VERSION,
@@ -143,8 +157,13 @@ export async function createBackup(): Promise<BackupData> {
           fromName: emailConfiguration.fromName,
           replyTo: emailConfiguration.replyTo,
           ccRecipients: emailConfiguration.ccRecipients,
-          sendDayOfWeek: emailConfiguration.sendDayOfWeek,
-          sendTime: emailConfiguration.sendTime,
+          schedules: emailSchedules.map((schedule) => ({
+            id: schedule.id,
+            dayOfWeek: schedule.dayOfWeek,
+            sendTime: schedule.sendTime,
+            weekOffset: schedule.weekOffset,
+            enabled: schedule.enabled,
+          })),
           timezone: emailConfiguration.timezone,
           enabled: emailConfiguration.enabled,
           introHtml: emailConfiguration.introHtml,
@@ -233,8 +252,19 @@ const backupSchema = z.object({
       fromName: z.string().nullish(),
       replyTo: z.string().nullish(),
       ccRecipients: z.array(z.string()).default([]),
-      sendDayOfWeek: z.coerce.number().int().min(0).max(6).default(3),
-      sendTime: z.string().default("09:00"),
+      schedules: z
+        .array(
+          z.object({
+            id: z.string().optional(),
+            dayOfWeek: z.coerce.number().int().min(0).max(6),
+            sendTime: z.string(),
+            weekOffset: z.coerce.number().int().min(0).max(1).default(1),
+            enabled: z.boolean().default(true),
+          }),
+        )
+        .optional(),
+      sendDayOfWeek: z.coerce.number().int().min(0).max(6).optional(),
+      sendTime: z.string().optional(),
       timezone: z.string().default("Europe/Paris"),
       enabled: z.boolean().default(false),
       introHtml: z.string().nullish(),
@@ -467,8 +497,6 @@ export async function restoreBackup(input: unknown, mode: RestoreMode): Promise<
           fromName: config.fromName ?? null,
           replyTo: config.replyTo ?? null,
           ccRecipients: config.ccRecipients,
-          sendDayOfWeek: config.sendDayOfWeek,
-          sendTime: config.sendTime,
           timezone: config.timezone,
           enabled: config.enabled,
           introHtml: config.introHtml ?? null,
@@ -479,6 +507,38 @@ export async function restoreBackup(input: unknown, mode: RestoreMode): Promise<
           create: { id: "default", ...payload },
           update: payload,
         });
+
+        // Les fichiers exportes avant les creneaux multiples ne contiennent
+        // qu'un seul jour et une seule heure : on les convertit.
+        const schedules: {
+          id?: string;
+          dayOfWeek: number;
+          sendTime: string;
+          weekOffset: number;
+          enabled: boolean;
+        }[] =
+          config.schedules && config.schedules.length > 0
+            ? config.schedules
+            : [
+                {
+                  dayOfWeek: config.sendDayOfWeek ?? 3,
+                  sendTime: config.sendTime ?? "09:00",
+                  weekOffset: 1,
+                  enabled: true,
+                },
+              ];
+        await tx.emailSchedule.deleteMany();
+        for (const schedule of schedules) {
+          await tx.emailSchedule.create({
+            data: {
+              ...(schedule.id ? { id: schedule.id } : {}),
+              dayOfWeek: schedule.dayOfWeek,
+              sendTime: schedule.sendTime,
+              weekOffset: schedule.weekOffset,
+              enabled: schedule.enabled,
+            },
+          });
+        }
         emailConfigurationSaved = true;
       }
 

@@ -60,6 +60,8 @@ export type ScheduleConfig = {
   timezone: string;
   sendDayOfWeek: number;
   sendTime: string;
+  /** 0 : semaine en cours au jour d'envoi, 1 : semaine suivante (defaut). */
+  weekOffset?: number;
 };
 
 export type ScheduleDecision =
@@ -70,7 +72,8 @@ export type ScheduleDecision =
 
 /**
  * Determine si l'envoi automatique doit se declencher pour l'instant fourni,
- * ainsi que la semaine visee : la SEMAINE SUIVANTE (regle du cahier des charges).
+ * ainsi que la semaine visee : la semaine suivante par defaut, ou la semaine en
+ * cours du jour d'envoi lorsque `weekOffset` vaut 0.
  */
 export function decideSchedule(config: ScheduleConfig, reference: Date): ScheduleDecision {
   if (!config.enabled) return { status: "disabled" };
@@ -83,6 +86,47 @@ export function decideSchedule(config: ScheduleConfig, reference: Date): Schedul
   if (zoned.hour !== send.hour || zoned.minute !== send.minute) return { status: "not-due" };
 
   const localDate = new Date(Date.UTC(zoned.year, zoned.month - 1, zoned.day));
-  const { weekYear, weekNumber } = getISOWeekInfo(addDays(localDate, 7));
+  const { weekYear, weekNumber } = getISOWeekInfo(addDays(localDate, 7 * (config.weekOffset ?? 1)));
   return { status: "due", weekYear, weekNumber };
+}
+
+export type ScheduleSlot = {
+  id: string;
+  dayOfWeek: number;
+  sendTime: string;
+  weekOffset: number;
+  enabled: boolean;
+};
+
+export type DueSlot = { id: string; weekYear: number; weekNumber: number };
+
+/**
+ * Liste les creneaux a traiter pour l'instant fourni. Chaque creneau est
+ * independant : deux creneaux peuvent viser la meme semaine.
+ */
+export function findDueSlots(
+  slots: ScheduleSlot[],
+  config: { enabled: boolean; timezone: string },
+  reference: Date,
+): DueSlot[] {
+  if (!config.enabled) return [];
+
+  const due: DueSlot[] = [];
+  for (const slot of slots) {
+    if (!slot.enabled) continue;
+    const decision = decideSchedule(
+      {
+        enabled: true,
+        timezone: config.timezone,
+        sendDayOfWeek: slot.dayOfWeek,
+        sendTime: slot.sendTime,
+        weekOffset: slot.weekOffset,
+      },
+      reference,
+    );
+    if (decision.status === "due") {
+      due.push({ id: slot.id, weekYear: decision.weekYear, weekNumber: decision.weekNumber });
+    }
+  }
+  return due;
 }

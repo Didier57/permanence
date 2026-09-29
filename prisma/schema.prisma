@@ -172,8 +172,6 @@ model EmailConfiguration {
   fromName              String?        @map("from_name")
   replyTo               String?        @map("reply_to")
   ccRecipients          String[]       @default([]) @map("cc_recipients")
-  sendDayOfWeek         Int            @default(3) @map("send_day_of_week")
-  sendTime              String         @default("09:00") @map("send_time")
   timezone              String         @default("Europe/Paris")
   enabled               Boolean        @default(false)
   introHtml             String?        @map("intro_html")
@@ -182,6 +180,23 @@ model EmailConfiguration {
   updatedAt             DateTime       @updatedAt @map("updated_at")
 
   @@map("email_configuration")
+}
+
+/// Creneau d'envoi automatique du planning. Plusieurs creneaux peuvent etre
+/// programmes ; `weekOffset` vaut 0 pour la semaine en cours du jour d'envoi et
+/// 1 pour la semaine suivante.
+model EmailSchedule {
+  id         String   @id @default(cuid())
+  dayOfWeek  Int      @map("day_of_week")
+  sendTime   String   @map("send_time")
+  weekOffset Int      @default(1) @map("week_offset")
+  enabled    Boolean  @default(true)
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  emailSends EmailHistory[]
+
+  @@map("email_schedules")
 }
 
 model AppConfiguration {
@@ -224,9 +239,11 @@ model EmailHistory {
   contentHash       String?         @map("content_hash")
   planningVersionId String?         @map("planning_version_id")
   sentByAccountId   String?         @map("sent_by_account_id")
+  scheduleId        String?         @map("schedule_id")
 
   planningVersion PlanningVersion? @relation(fields: [planningVersionId], references: [id], onDelete: SetNull)
   sentBy          Account?         @relation("EmailSentBy", fields: [sentByAccountId], references: [id], onDelete: SetNull)
+  schedule        EmailSchedule?   @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
 
   @@index([weekYear, weekNumber])
   @@map("email_history")

@@ -15,6 +15,8 @@ export type EmailActionState = { ok?: boolean; error?: string; message?: string 
 
 const emailAddress = emailAddressSchema;
 
+const sendTimeSchema = z.string().regex(/^\d{2}:\d{2}$/, "Heure invalide (HH:MM)");
+
 const configSchema = z.object({
   smtpHost: z.string().trim().min(1, "Le serveur SMTP est requis").max(255),
   smtpPort: z.coerce.number().int().min(1, "Port invalide").max(65535),
@@ -23,13 +25,33 @@ const configSchema = z.object({
   fromAddress: emailAddress,
   fromName: z.string().trim().max(150).optional(),
   replyTo: z.string().trim().optional(),
-  sendDayOfWeek: z.coerce.number().int().min(0).max(6),
-  sendTime: z.string().regex(/^\d{2}:\d{2}$/, "Heure invalide (HH:MM)"),
   timezone: z.string().trim().min(1).max(100),
   enabled: z.boolean(),
   introHtml: z.string().max(50000).optional(),
   outroHtml: z.string().max(50000).optional(),
 });
+
+const scheduleSchema = z.object({
+  id: z.string().trim().max(64).optional(),
+  dayOfWeek: z.coerce.number().int().min(0).max(6),
+  sendTime: sendTimeSchema,
+  weekOffset: z.coerce.number().int().min(0).max(1).default(1),
+  enabled: z.boolean().default(true),
+});
+
+/** Decode la liste des creneaux transmise en JSON par le formulaire. */
+function parseSchedules(raw: FormDataEntryValue | null): z.infer<typeof scheduleSchema>[] | null {
+  if (typeof raw !== "string" || raw.trim() === "") return [];
+  let json: unknown;
+  try {
+    json = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+  if (!Array.isArray(json)) return null;
+  const parsed = z.array(scheduleSchema).safeParse(json);
+  return parsed.success ? parsed.data : null;
+}
 
 export async function saveEmailConfiguration(
   _prev: EmailActionState,
@@ -49,8 +71,6 @@ export async function saveEmailConfiguration(
     fromAddress: formData.get("fromAddress"),
     fromName: formData.get("fromName") ?? undefined,
     replyTo: formData.get("replyTo") ?? undefined,
-    sendDayOfWeek: formData.get("sendDayOfWeek") ?? 3,
-    sendTime: formData.get("sendTime") ?? "09:00",
     timezone: (formData.get("timezone") as string) || "Europe/Paris",
     enabled: formData.get("enabled") === "on",
     introHtml: formData.get("introHtml") ?? undefined,
@@ -58,6 +78,14 @@ export async function saveEmailConfiguration(
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Donnees invalides." };
+  }
+
+  const schedules = parseSchedules(formData.get("schedules"));
+  if (schedules === null) {
+    return { error: "Creneaux d'envoi invalides." };
+  }
+  if (formData.get("enabled") === "on" && schedules.length === 0) {
+    return { error: "Ajoutez au moins un creneau d'envoi." };
   }
 
   const data = parsed.data;
@@ -89,21 +117,47 @@ export async function saveEmailConfiguration(
     fromName: data.fromName?.trim() ? data.fromName.trim() : null,
     replyTo: replyToRaw || null,
     ccRecipients,
-    sendDayOfWeek: data.sendDayOfWeek,
-    sendTime: data.sendTime,
     timezone: data.timezone,
     enabled: data.enabled,
     introHtml: data.introHtml ? sanitizeRichText(data.introHtml) : null,
     outroHtml: data.outroHtml ? sanitizeRichText(data.outroHtml) : null,
   };
 
-  await prisma.emailConfiguration.upsert({
-    where: { id: "default" },
-    create: { id: "default", ...payload },
-    update: payload,
+  await prisma.$transaction(async (tx) => {
+    await tx.emailConfiguration.upsert({
+      where: { id: "default" },
+      create: { id: "default", ...payload },
+      update: payload,
+    });
+
+    const keptIds: string[] = [];
+    for (const slot of schedules) {
+      const slotData = {
+        dayOfWeek: slot.dayOfWeek,
+        sendTime: slot.sendTime,
+        weekOffset: slot.weekOffset,
+        enabled: slot.enabled,
+      };
+      const known = slot.id
+        ? await tx.emailSchedule.findUnique({ where: { id: slot.id }, select: { id: true } })
+        : null;
+      if (known) {
+        await tx.emailSchedule.update({ where: { id: known.id }, data: slotData });
+        keptIds.push(known.id);
+      } else {
+        const created = await tx.emailSchedule.create({ data: slotData, select: { id: true } });
+        keptIds.push(created.id);
+      }
+    }
+    await tx.emailSchedule.deleteMany(
+      keptIds.length > 0 ? { where: { id: { notIn: keptIds } } } : undefined,
+    );
   });
 
-  logger.info({ enabled: payload.enabled, host: payload.smtpHost }, "email.config.saved");
+  logger.info(
+    { enabled: payload.enabled, host: payload.smtpHost, schedules: schedules.length },
+    "email.config.saved",
+  );
   revalidatePath("/emails");
   return { ok: true, message: "Configuration SMTP enregistree." };
 }

@@ -218,6 +218,16 @@ export const EN_MESSAGES: Record<string, string> = {
   Active: "Enabled",
   "Jour d'envoi": "Send day",
   "Heure d'envoi": "Send time",
+  "Planning vise": "Targeted schedule",
+  "Semaine suivante": "Following week",
+  "Semaine en cours": "Current week",
+  "Aucun creneau programme.": "No slot scheduled.",
+  "Ajouter un creneau": "Add a slot",
+  "Supprimer le creneau": "Remove the slot",
+  "Programmez un ou plusieurs envois. Chaque creneau envoie le planning une seule fois.":
+    "Schedule one or more sends. Each slot sends the schedule only once.",
+  "Creneaux d'envoi invalides.": "Invalid send slots.",
+  "Ajoutez au moins un creneau d'envoi.": "Add at least one send slot.",
   "Fuseau horaire": "Time zone",
   "Modele du message": "Message template",
   "Ces textes sont inseres dans l'email, au-dessus puis en dessous du planning. Laissez vide pour ne rien ajouter.":
@@ -263,8 +273,8 @@ export const EN_MESSAGES: Record<string, string> = {
     "Export and restore of the application data.",
   "Contenu de la sauvegarde": "Backup content",
   "Restaurer une sauvegarde": "Restore a backup",
-  "Le fichier exporte contient le personnel, les comptes d'acces (empreintes des mots de passe, roles et etat), les groupes et leurs affectations, le planning des permanences, la configuration du site (identifiants SMTP chiffres, expediteur, CC, jour et heure d'envoi) ainsi que l'adresse publique. L'historique des emails et les liens d'activation en cours ne sont pas inclus.":
-    "The exported file contains the staff, the access accounts (password hashes, roles and status), the groups and their assignments, the shift schedule, the site configuration (encrypted SMTP credentials, sender, CC, send day and time) and the public address. The email history and pending activation links are not included.",
+  "Le fichier exporte contient le personnel, les comptes d'acces (empreintes des mots de passe, roles et etat), les groupes et leurs affectations, le planning des permanences, la configuration du site (identifiants SMTP chiffres, expediteur, CC, creneaux d'envoi) ainsi que l'adresse publique. L'historique des emails et les liens d'activation en cours ne sont pas inclus.":
+    "The exported file contains the staff, the access accounts (password hashes, roles and status), the groups and their assignments, the shift schedule, the site configuration (encrypted SMTP credentials, sender, CC, send slots) and the public address. The email history and pending activation links are not included.",
   "La restauration remplace ou met a jour les personnes, groupes et permanences. Les comptes d'acces du fichier sont crees ou mis a jour (empreinte du mot de passe, role, etat) sans jamais supprimer les comptes existants : un compte dont la personne est retrouvee par son email est automatiquement relie a nouveau. La restauration est refusee si elle ne laisserait aucun administrateur actif.":
     "The restore replaces or updates the people, groups and shifts. The access accounts from the file are created or updated (password hash, role, status) without ever deleting existing accounts: an account whose person is found again by email is automatically linked again. The restore is refused if it would leave no active administrator.",
   Personnes: "People",

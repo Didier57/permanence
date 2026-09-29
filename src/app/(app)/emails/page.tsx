@@ -19,8 +19,7 @@ const EMPTY_CONFIG: EmailConfigView = {
   fromName: null,
   replyTo: null,
   ccRecipients: [],
-  sendDayOfWeek: 3,
-  sendTime: "09:00",
+  schedules: [{ id: "", dayOfWeek: 3, sendTime: "09:00", weekOffset: 1, enabled: true }],
   timezone: "Europe/Paris",
   enabled: false,
   hasPassword: false,
@@ -38,6 +37,18 @@ export default async function EmailsPage() {
   const record = isAdmin
     ? await prisma.emailConfiguration.findUnique({ where: { id: "default" } })
     : null;
+  const schedules = isAdmin
+    ? await prisma.emailSchedule.findMany({
+        orderBy: [{ dayOfWeek: "asc" }, { sendTime: "asc" }],
+      })
+    : [];
+  const scheduleRows = schedules.map((schedule) => ({
+    id: schedule.id,
+    dayOfWeek: schedule.dayOfWeek,
+    sendTime: schedule.sendTime,
+    weekOffset: schedule.weekOffset,
+    enabled: schedule.enabled,
+  }));
   const config: EmailConfigView = record
     ? {
         smtpHost: record.smtpHost,
@@ -48,15 +59,17 @@ export default async function EmailsPage() {
         fromName: record.fromName,
         replyTo: record.replyTo,
         ccRecipients: record.ccRecipients,
-        sendDayOfWeek: record.sendDayOfWeek,
-        sendTime: record.sendTime,
+        schedules: scheduleRows,
         timezone: record.timezone,
         enabled: record.enabled,
         hasPassword: Boolean(record.smtpPasswordEncrypted),
         introHtml: record.introHtml ?? "",
         outroHtml: record.outroHtml ?? "",
       }
-    : EMPTY_CONFIG;
+    : {
+        ...EMPTY_CONFIG,
+        schedules: scheduleRows.length > 0 ? scheduleRows : EMPTY_CONFIG.schedules,
+      };
 
   const today = dateKey(toUTCDateOnly(new Date()));
 

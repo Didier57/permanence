@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { decideSchedule, getZonedParts, parseSendTime } from "./schedule";
+import { decideSchedule, findDueSlots, getZonedParts, parseSendTime } from "./schedule";
 
 describe("parseSendTime", () => {
   it("accepte une heure valide", () => {
@@ -79,5 +79,57 @@ describe("decideSchedule", () => {
       weekYear: 2026,
       weekNumber: 2,
     });
+  });
+
+  it("vise la semaine en cours au jour d'envoi quand weekOffset vaut 0", () => {
+    expect(decideSchedule({ ...base, weekOffset: 0 }, new Date("2026-10-14T07:00:00Z"))).toEqual({
+      status: "due",
+      weekYear: 2026,
+      weekNumber: 42,
+    });
+  });
+
+  it("vise la semaine suivante quand weekOffset vaut 1", () => {
+    expect(decideSchedule({ ...base, weekOffset: 1 }, new Date("2026-10-14T07:00:00Z"))).toEqual({
+      status: "due",
+      weekYear: 2026,
+      weekNumber: 43,
+    });
+  });
+});
+
+describe("findDueSlots", () => {
+  const config = { enabled: true, timezone: "Europe/Paris" };
+  const slots = [
+    { id: "lundi-matin", dayOfWeek: 1, sendTime: "09:00", weekOffset: 0, enabled: true },
+    { id: "mercredi", dayOfWeek: 3, sendTime: "09:00", weekOffset: 1, enabled: true },
+    { id: "jeudi-desactive", dayOfWeek: 4, sendTime: "09:00", weekOffset: 1, enabled: false },
+  ];
+
+  it("ne renvoie rien quand l'envoi automatique est desactive", () => {
+    expect(findDueSlots(slots, { ...config, enabled: false }, new Date("2026-10-14T07:00:00Z"))).toEqual(
+      [],
+    );
+  });
+
+  it("ne declenche que le creneau dont le jour et l'heure correspondent", () => {
+    expect(findDueSlots(slots, config, new Date("2026-10-14T07:00:00Z"))).toEqual([
+      { id: "mercredi", weekYear: 2026, weekNumber: 43 },
+    ]);
+  });
+
+  it("gere plusieurs creneaux le meme jour avec des semaines visees differentes", () => {
+    const bothSameDay = [
+      { id: "matin", dayOfWeek: 1, sendTime: "09:00", weekOffset: 0, enabled: true },
+      { id: "matin-suivante", dayOfWeek: 1, sendTime: "09:00", weekOffset: 1, enabled: true },
+    ];
+    expect(findDueSlots(bothSameDay, config, new Date("2026-10-19T07:00:00Z"))).toEqual([
+      { id: "matin", weekYear: 2026, weekNumber: 43 },
+      { id: "matin-suivante", weekYear: 2026, weekNumber: 44 },
+    ]);
+  });
+
+  it("ignore un creneau desactive", () => {
+    expect(findDueSlots(slots, config, new Date("2026-10-15T07:00:00Z"))).toEqual([]);
   });
 });

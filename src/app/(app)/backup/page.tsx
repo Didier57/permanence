@@ -40,7 +40,7 @@ export default async function BackupPage() {
             <T msg="Contenu de la sauvegarde" />
           </h2>
           <p className="mb-4 text-sm text-slate-500">
-            <T msg="Le fichier exporte contient le personnel, les comptes d'acces (empreintes des mots de passe, roles et etat), les groupes et leurs affectations, le planning des permanences, la configuration du site (identifiants SMTP chiffres, expediteur, CC, jour et heure d'envoi) ainsi que l'adresse publique. L'historique des emails et les liens d'activation en cours ne sont pas inclus." />
+            <T msg="Le fichier exporte contient le personnel, les comptes d'acces (empreintes des mots de passe, roles et etat), les groupes et leurs affectations, le planning des permanences, la configuration du site (identifiants SMTP chiffres, expediteur, CC, creneaux d'envoi) ainsi que l'adresse publique. L'historique des emails et les liens d'activation en cours ne sont pas inclus." />
           </p>
           <dl className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
             <div className="rounded-md bg-slate-50 p-3">

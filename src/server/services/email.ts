@@ -210,6 +210,7 @@ export async function sendWeekEmail(options: {
   weekNumber: number;
   type: SendType;
   accountId?: string | null;
+  scheduleId?: string | null;
 }): Promise<SendResult> {
   const config = await getEmailConfig();
   if (!config) return { ok: false, error: "Aucune configuration SMTP enregistrée." };
@@ -295,6 +296,7 @@ export async function sendWeekEmail(options: {
         contentHash,
         planningVersionId: version.id,
         sentByAccountId: options.accountId ?? null,
+        scheduleId: options.scheduleId ?? null,
       },
     });
 
@@ -329,6 +331,7 @@ export async function sendWeekEmail(options: {
         error: message,
         contentHash,
         sentByAccountId: options.accountId ?? null,
+        scheduleId: options.scheduleId ?? null,
       },
     });
     logger.error({ err: error, weekYear: options.weekYear, weekNumber: options.weekNumber }, "email.send.error");
