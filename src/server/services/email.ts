@@ -93,8 +93,10 @@ function rangeLabel(days: Date[], start: number, end: number, locale: Locale): s
 type EmailStrings = {
   title: string;
   week: (weekNumber: number, start: string, end: string) => string;
-  phoneLabel: string;
-  phoneShort: string;
+  proPhoneLabel: string;
+  privatePhoneLabel: string;
+  proPhoneShort: string;
+  privatePhoneShort: string;
   emailLabel: string;
   subject: (weekNumber: number, start: string, end: string, suffix: string) => string;
 };
@@ -103,8 +105,10 @@ const EMAIL_STRINGS: Record<Locale, EmailStrings> = {
   fr: {
     title: "Planning des permanences",
     week: (weekNumber, start, end) => `Semaine ${weekNumber} du ${start} au ${end}`,
-    phoneLabel: "Téléphone",
-    phoneShort: "Tél.",
+    proPhoneLabel: "Téléphone professionnel",
+    privatePhoneLabel: "Téléphone privé",
+    proPhoneShort: "Tél. pro",
+    privatePhoneShort: "Tél. privé",
     emailLabel: "Email",
     subject: (weekNumber, start, end, suffix) =>
       `Permanence semaine ${weekNumber} du ${start} à ${end}${suffix}`,
@@ -112,8 +116,10 @@ const EMAIL_STRINGS: Record<Locale, EmailStrings> = {
   en: {
     title: "On-call schedule",
     week: (weekNumber, start, end) => `Week ${weekNumber} from ${start} to ${end}`,
-    phoneLabel: "Phone",
-    phoneShort: "Phone",
+    proPhoneLabel: "Work phone",
+    privatePhoneLabel: "Private phone",
+    proPhoneShort: "Work",
+    privatePhoneShort: "Private",
     emailLabel: "Email",
     subject: (weekNumber, start, end, suffix) =>
       `On-call schedule week ${weekNumber} from ${start} to ${end}${suffix}`,
@@ -187,17 +193,21 @@ export function buildWeekEmail(
       const label = rangeLabel(days, range.start, range.end, locale);
       const proPhone = range.entry.userProPhone;
       const privatePhone = range.entry.userPrivatePhone;
-      const phone = proPhone ?? privatePhone ?? "—";
-      const phoneCell = proPhone || privatePhone
-        ? `<a href="${telHref(phone)}" style="color:#0369a1;text-decoration:none;">${escapeHtml(phone)}</a>`
-        : escapeHtml(phone);
+      const phoneLink = (value: string) =>
+        `<a href="${telHref(value)}" style="color:#0369a1;text-decoration:none;">${escapeHtml(value)}</a>`;
+      const proCell = proPhone ? phoneLink(proPhone) : "—";
+      const privateCell = privatePhone ? phoneLink(privatePhone) : "—";
       const emailCell = range.entry.userEmail
         ? `<a href="mailto:${escapeHtml(range.entry.userEmail)}" style="color:#0369a1;text-decoration:none;">${escapeHtml(range.entry.userEmail)}</a>`
         : "—";
-      text += `${label} : ${range.entry.userName} — ${strings.phoneLabel} : ${phone} — ${strings.emailLabel} : ${range.entry.userEmail}\n`;
+      text += `${label} : ${range.entry.userName} — ${strings.emailLabel} : ${range.entry.userEmail}`;
+      text += ` — ${strings.proPhoneLabel} : ${proPhone ?? "—"} — ${strings.privatePhoneLabel} : ${privatePhone ?? "—"}\n`;
       html += `<tr>`;
       html += `<td style="border:1px solid #e2e8f0;padding:2px 6px;vertical-align:top;white-space:nowrap;">${escapeHtml(label)}</td>`;
-      html += `<td style="border:1px solid #e2e8f0;padding:2px 6px;vertical-align:top;"><strong>${escapeHtml(range.entry.userName)}</strong> — ${strings.phoneShort} : ${phoneCell} — ${strings.emailLabel} : ${emailCell}</td>`;
+      html += `<td style="border:1px solid #e2e8f0;padding:2px 6px;vertical-align:top;">`;
+      html += `<div><strong>${escapeHtml(range.entry.userName)}</strong> — ${strings.emailLabel} : ${emailCell}</div>`;
+      html += `<div style="color:#475569;">${strings.proPhoneShort} : ${proCell} — ${strings.privatePhoneShort} : ${privateCell}</div>`;
+      html += `</td>`;
       html += `</tr>`;
     }
     html += `</table></div>`;

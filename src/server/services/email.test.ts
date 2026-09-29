@@ -174,8 +174,8 @@ describe("buildWeekEmail", () => {
   });
 
   it("affiche le telephone professionnel puis prive en secours", () => {
-    expect(email.text).toContain("Téléphone : 0102030405");
-    expect(email.text).toContain("Téléphone : 0607080910");
+    expect(email.text).toContain("Téléphone professionnel : 0102030405");
+    expect(email.text).toContain("Téléphone privé : 0607080910");
   });
 
   it("fournit une version HTML avec echappement", () => {
@@ -184,11 +184,16 @@ describe("buildWeekEmail", () => {
     expect(email.html).toContain("jean@example.com");
   });
 
-  it("rend l'email et le telephone cliquables", () => {
+  it("rend l'email et les telephones cliquables sur deux lignes", () => {
     expect(email.html).toContain('href="mailto:jean@example.com"');
     expect(email.html).toContain('href="tel:0102030405"');
     expect(email.html).toContain('href="tel:0607080910"');
     expect(email.html).not.toContain("tel:—");
+    expect(email.html).toContain("Tél. pro :");
+    expect(email.html).toContain("Tél. privé :");
+    expect(email.html.indexOf("Tél. pro :")).toBeGreaterThan(
+      email.html.indexOf("jean@example.com"),
+    );
   });
 
   it("compacte la mise en page pour tenir sur une page A4 portrait", () => {
