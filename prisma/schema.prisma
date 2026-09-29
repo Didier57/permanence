@@ -29,6 +29,11 @@ enum EmailSendStatus {
   ERROR
 }
 
+enum AccountTokenType {
+  ACTIVATION
+  RESET
+}
+
 model User {
   id           String   @id @default(cuid())
   firstName    String   @map("first_name")
@@ -107,18 +112,36 @@ model Account {
   role         Role      @default(USER)
   active       Boolean   @default(true)
   userId       String?   @unique @map("user_id")
+  activatedAt  DateTime? @map("activated_at")
   lastLoginAt  DateTime? @map("last_login_at")
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
 
-  user               User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user               User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
   sessions           Session[]
-  createdPermanences Permanence[] @relation("PermanenceCreatedBy")
-  updatedPermanences Permanence[] @relation("PermanenceUpdatedBy")
+  tokens             AccountToken[]
+  createdPermanences Permanence[]   @relation("PermanenceCreatedBy")
+  updatedPermanences Permanence[]   @relation("PermanenceUpdatedBy")
   emailSends         EmailHistory[] @relation("EmailSentBy")
 
   @@map("accounts")
 }
+
+model AccountToken {
+  id        String           @id @default(cuid())
+  accountId String           @map("account_id")
+  type      AccountTokenType
+  tokenHash String           @unique @map("token_hash")
+  expiresAt DateTime         @map("expires_at")
+  usedAt    DateTime?        @map("used_at")
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId])
+  @@map("account_tokens")
+}
+
 
 model Session {
   id        String   @id @default(cuid())

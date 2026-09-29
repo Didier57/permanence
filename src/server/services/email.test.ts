@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildWeekEmail } from "./email";
+import { accountLinkPath, buildAccountEmail, buildAccountLinkUrl, buildWeekEmail } from "./email";
 import type { PlanningEntry, WeekSnapshot } from "./planning";
 
 function entry(overrides: Partial<PlanningEntry> & Pick<PlanningEntry, "date" | "groupId" | "userId">): PlanningEntry {
@@ -95,5 +95,40 @@ describe("buildWeekEmail", () => {
     });
     expect(dangerous.html).not.toContain("<script>alert(1)</script>");
     expect(dangerous.html).toContain("&lt;script&gt;");
+  });
+});
+
+describe("buildAccountEmail", () => {
+  const expiresAt = new Date(Date.UTC(2026, 9, 14, 9, 0, 0));
+
+  it("prepare un email d'activation avec le lien et la date d'expiration", () => {
+    const email = buildAccountEmail({
+      kind: "ACTIVATION",
+      name: "Jean Dupont",
+      url: "https://exemple.fr/activer?token=abc",
+      expiresAt,
+    });
+    expect(email.subject).toBe("Activation de votre compte Permanence");
+    expect(email.text).toContain("Bonjour Jean Dupont,");
+    expect(email.text).toContain("https://exemple.fr/activer?token=abc");
+    expect(email.text).toContain("14/10/2026");
+    expect(email.html).toContain("Activer mon compte");
+  });
+
+  it("prepare un email de reinitialisation", () => {
+    const email = buildAccountEmail({
+      kind: "RESET",
+      url: "https://exemple.fr/reinitialiser?token=abc",
+      expiresAt,
+    });
+    expect(email.subject).toBe("Reinitialisation de votre mot de passe Permanence");
+    expect(email.text).toContain("Bonjour,");
+    expect(email.html).toContain("Definir un nouveau mot de passe");
+  });
+
+  it("construit les liens vers les bonnes pages", () => {
+    expect(accountLinkPath("ACTIVATION")).toBe("/activer");
+    expect(accountLinkPath("RESET")).toBe("/reinitialiser");
+    expect(buildAccountLinkUrl("tok en", "ACTIVATION")).toContain("/activer?token=tok%20en");
   });
 });

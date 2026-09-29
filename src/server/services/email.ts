@@ -1,6 +1,7 @@
 import { decryptSecret } from "@/lib/crypto";
-import { dateKey, dayNameFrCapitalized, formatDateFr, formatDayMonthFr, fromDateInput } from "@/lib/date";
+import { dateKey, dayNameFrCapitalized, formatDateFr, formatDayMonthFr, fromDateInput, toUTCDateOnly } from "@/lib/date";
 import { prisma } from "@/lib/db";
+import { getEnv } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import {
   createTransport,
@@ -242,6 +243,105 @@ export async function sendTestEmail(to: string): Promise<{ ok: boolean; error?: 
     const message = error instanceof Error ? error.message : String(error);
     logger.error({ err: error }, "email.test.error");
     return { ok: false, error: `Echec du test : ${message}` };
+  } finally {
+    transport.close();
+  }
+}
+
+export type AccountEmailKind = "ACTIVATION" | "RESET";
+
+export type AccountEmailResult = {
+  ok: boolean;
+  error?: string;
+};
+
+export function accountLinkPath(kind: AccountEmailKind): string {
+  return kind === "ACTIVATION" ? "/activer" : "/reinitialiser";
+}
+
+export function buildAccountLinkUrl(token: string, kind: AccountEmailKind): string {
+  const base = getEnv().APP_URL.replace(/\/+$/, "");
+  return `${base}${accountLinkPath(kind)}?token=${encodeURIComponent(token)}`;
+}
+
+export function buildAccountEmail(options: {
+  kind: AccountEmailKind;
+  name?: string | null;
+  url: string;
+  expiresAt: Date;
+}): BuiltEmail {
+  const activation = options.kind === "ACTIVATION";
+  const subject = activation
+    ? "Activation de votre compte Permanence"
+    : "Reinitialisation de votre mot de passe Permanence";
+  const greeting = options.name ? `Bonjour ${options.name},` : "Bonjour,";
+  const lead = activation
+    ? "Un compte a ete cree pour vous sur l'application de gestion des permanences."
+    : "Une reinitialisation de votre mot de passe a ete demandee.";
+  const cta = activation ? "Activer mon compte" : "Definir un nouveau mot de passe";
+  const expiry = formatDateFr(toUTCDateOnly(options.expiresAt));
+
+  const text = [
+    greeting,
+    "",
+    lead,
+    "",
+    `Pour ${activation ? "activer votre compte" : "reinitialiser votre mot de passe"}, cliquez sur ce lien :`,
+    options.url,
+    "",
+    `Ce lien est valable jusqu'au ${expiry}.`,
+    "",
+    "Si vous n'etes pas a l'origine de cette demande, ignorez cet email.",
+  ].join("\n");
+
+  const html = [
+    "<!DOCTYPE html>",
+    '<html lang="fr"><body style="font-family:Arial,Helvetica,sans-serif;color:#0f172a;line-height:1.5">',
+    `<p>${escapeHtml(greeting)}</p>`,
+    `<p>${escapeHtml(lead)}</p>`,
+    `<p style="margin:24px 0"><a href="${options.url}" style="background:#0f172a;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none">${escapeHtml(cta)}</a></p>`,
+    `<p>Ou copiez ce lien dans votre navigateur :<br /><a href="${options.url}">${escapeHtml(options.url)}</a></p>`,
+    `<p>Ce lien est valable jusqu'au ${expiry}.</p>`,
+    "<p>Si vous n'etes pas a l'origine de cette demande, ignorez cet email.</p>",
+    "</body></html>",
+  ].join("\n");
+
+  return { subject, text, html, recipients: [] };
+}
+
+export async function sendAccountEmail(options: {
+  to: string;
+  kind: AccountEmailKind;
+  name?: string | null;
+  url: string;
+  expiresAt: Date;
+}): Promise<AccountEmailResult> {
+  const config = await getEmailConfig();
+  if (!config || !config.smtpHost || !config.fromAddress) {
+    return {
+      ok: false,
+      error: "Configuration SMTP non renseignee : l'email n'a pas pu etre envoye.",
+    };
+  }
+
+  const settings = resolveSmtpSettings(config);
+  const email = buildAccountEmail(options);
+  const transport = createTransport(settings);
+  try {
+    await sendMail(transport, {
+      from: formatFromAddress(config.fromAddress, config.fromName),
+      to: options.to,
+      replyTo: config.replyTo ?? undefined,
+      subject: email.subject,
+      text: email.text,
+      html: email.html,
+    });
+    logger.info({ to: options.to, kind: options.kind }, "account.email.sent");
+    return { ok: true };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    logger.error({ err: error, kind: options.kind }, "account.email.error");
+    return { ok: false, error: `Echec de l'envoi : ${message}` };
   } finally {
     transport.close();
   }

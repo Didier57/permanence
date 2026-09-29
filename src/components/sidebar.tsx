@@ -17,6 +17,8 @@ const ADMIN_ITEMS: NavItem[] = [
 
 const USER_ITEMS: NavItem[] = [{ href: "/planning", label: "Planning" }];
 
+const ACCOUNT_ITEM: NavItem = { href: "/mon-compte", label: "Mon compte" };
+
 export function Sidebar({
   role,
   displayName,
@@ -25,7 +27,7 @@ export function Sidebar({
   displayName: string;
 }) {
   const pathname = usePathname();
-  const items = role === "ADMIN" ? ADMIN_ITEMS : USER_ITEMS;
+  const items = role === "ADMIN" ? [...ADMIN_ITEMS, ACCOUNT_ITEM] : [...USER_ITEMS, ACCOUNT_ITEM];
 
   return (
     <aside className="flex w-60 shrink-0 flex-col border-r border-slate-200 bg-white">

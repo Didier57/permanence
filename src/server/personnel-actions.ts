@@ -2,11 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { requireAdmin } from "@/lib/auth";
+import { createAccountToken, requireAdmin } from "@/lib/auth";
+import { generateToken, hashPassword } from "@/lib/crypto";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
+import { buildAccountLinkUrl, sendAccountEmail } from "./services/email";
 
-export type ActionState = { ok?: boolean; error?: string; message?: string };
+export type ActionState = { ok?: boolean; error?: string; message?: string; link?: string };
 
 const optionalPhone = z
   .string()
@@ -15,6 +17,8 @@ const optionalPhone = z
   .optional()
   .or(z.literal(""));
 
+const accessRole = z.enum(["NONE", "USER", "ADMIN"]);
+
 const userSchema = z.object({
   firstName: z.string().trim().min(1, "Le prenom est requis").max(100),
   lastName: z.string().trim().min(1, "Le nom est requis").max(100),
@@ -22,6 +26,7 @@ const userSchema = z.object({
   proPhone: optionalPhone,
   privatePhone: optionalPhone,
   active: z.boolean(),
+  accessRole: accessRole.default("NONE"),
 });
 
 export async function saveUser(_prev: ActionState, formData: FormData): Promise<ActionState> {
@@ -38,6 +43,7 @@ export async function saveUser(_prev: ActionState, formData: FormData): Promise<
     proPhone: formData.get("proPhone") ?? undefined,
     privatePhone: formData.get("privatePhone") ?? undefined,
     active: formData.get("active") === "on" || formData.get("active") === "true",
+    accessRole: (formData.get("accessRole")?.toString() || "NONE") as "NONE" | "USER" | "ADMIN",
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Donnees invalides." };
@@ -49,7 +55,7 @@ export async function saveUser(_prev: ActionState, formData: FormData): Promise<
     .map((value) => String(value))
     .filter(Boolean);
 
-  const { firstName, lastName, email } = parsed.data;
+  const { firstName, lastName, email, accessRole } = parsed.data;
   const proPhone = parsed.data.proPhone?.trim() ? parsed.data.proPhone.trim() : null;
   const privatePhone = parsed.data.privatePhone?.trim() ? parsed.data.privatePhone.trim() : null;
 
@@ -59,6 +65,9 @@ export async function saveUser(_prev: ActionState, formData: FormData): Promise<
   if (duplicate) {
     return { error: "Cet email est deja utilise par une autre personne." };
   }
+
+  const displayName = `${firstName} ${lastName}`.trim();
+  let userId = id;
 
   if (id) {
     await prisma.$transaction([
@@ -73,7 +82,7 @@ export async function saveUser(_prev: ActionState, formData: FormData): Promise<
       }),
     ]);
   } else {
-    await prisma.user.create({
+    const created = await prisma.user.create({
       data: {
         firstName,
         lastName,
@@ -84,13 +93,166 @@ export async function saveUser(_prev: ActionState, formData: FormData): Promise<
         memberships: { create: groupIds.map((groupId) => ({ groupId })) },
       },
     });
+    userId = created.id;
   }
 
-  logger.info({ email }, "user.saved");
+  await syncAccountAccess({
+    userId: userId as string,
+    email,
+    displayName,
+    accessRole,
+  });
+
+  logger.info({ email, accessRole }, "user.saved");
   revalidatePath("/personnel");
   revalidatePath("/planning");
+  revalidatePath("/configuration");
   return { ok: true, message: "Personne enregistree." };
 }
+
+async function syncAccountAccess(options: {
+  userId: string;
+  email: string;
+  displayName: string;
+  accessRole: "NONE" | "USER" | "ADMIN";
+}) {
+  const existing = await prisma.account.findUnique({ where: { userId: options.userId } });
+  const byEmail = await prisma.account.findUnique({ where: { email: options.email } });
+
+  if (options.accessRole === "NONE") {
+    if (existing) {
+      await prisma.account.update({ where: { id: existing.id }, data: { active: false } });
+      await prisma.session.deleteMany({ where: { accountId: existing.id } });
+    }
+    return;
+  }
+
+  if (existing && byEmail && existing.id !== byEmail.id) {
+    logger.warn({ userId: options.userId }, "account.link.conflict");
+    return;
+  }
+
+  if (existing) {
+    await prisma.account.update({
+      where: { id: existing.id },
+      data: { email: options.email, displayName: options.displayName, role: options.accessRole, active: true },
+    });
+    return;
+  }
+
+  const target = byEmail ?? null;
+  if (target) {
+    await prisma.account.update({
+      where: { id: target.id },
+      data: { userId: options.userId, displayName: options.displayName, role: options.accessRole, active: true },
+    });
+    return;
+  }
+
+  await prisma.account.create({
+    data: {
+      email: options.email,
+      displayName: options.displayName,
+      role: options.accessRole,
+      userId: options.userId,
+      active: true,
+      passwordHash: await hashPassword(generateToken()),
+    },
+  });
+}
+
+export type InvitationState = {
+  ok?: boolean;
+  error?: string;
+  message?: string;
+  link?: string;
+};
+
+export async function sendAccountInvitation(
+  _prev: InvitationState,
+  formData: FormData,
+): Promise<InvitationState> {
+  let admin;
+  try {
+    admin = await requireAdmin();
+  } catch {
+    return { error: "Acces refuse." };
+  }
+
+  const userId = formData.get("userId")?.toString();
+  if (!userId) return { error: "Utilisateur inconnu." };
+
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) return { error: "Utilisateur inconnu." };
+
+  const roleInput = (formData.get("role")?.toString() || "") as "NONE" | "USER" | "ADMIN" | "";
+  let account = await prisma.account.findUnique({ where: { userId } });
+
+  if (!account) {
+    const byEmail = await prisma.account.findUnique({ where: { email: user.email } });
+    if (byEmail) {
+      account = await prisma.account.update({
+        where: { id: byEmail.id },
+        data: {
+          userId: user.id,
+          displayName: `${user.firstName} ${user.lastName}`.trim(),
+          role: roleInput === "ADMIN" || roleInput === "USER" ? roleInput : "USER",
+          active: true,
+        },
+      });
+    } else {
+      account = await prisma.account.create({
+        data: {
+          email: user.email,
+          displayName: `${user.firstName} ${user.lastName}`.trim(),
+          role: roleInput === "ADMIN" ? "ADMIN" : "USER",
+          userId: user.id,
+          active: true,
+          passwordHash: await hashPassword(generateToken()),
+        },
+      });
+    }
+  } else if (roleInput === "ADMIN" || roleInput === "USER") {
+    account = await prisma.account.update({
+      where: { id: account.id },
+      data: { role: roleInput, active: true },
+    });
+  }
+
+  const kind = account.activatedAt ? "RESET" : "ACTIVATION";
+  const { token, expiresAt } = await createAccountToken(account.id, kind);
+  const url = buildAccountLinkUrl(token, kind);
+  const result = await sendAccountEmail({
+    to: account.email,
+    kind,
+    name: `${user.firstName} ${user.lastName}`.trim(),
+    url,
+    expiresAt,
+  });
+
+  logger.info({ userId, kind, sent: result.ok, by: admin.email }, "account.invitation");
+
+  revalidatePath("/personnel");
+  revalidatePath("/configuration");
+
+  if (!result.ok) {
+    return {
+      ok: false,
+      error: result.error ?? "Envoi impossible.",
+      link: url,
+      message:
+        "L'email n'a pas pu etre envoye. Transmettez le lien ci-dessous a la personne concernee.",
+    };
+  }
+
+  return {
+    ok: true,
+    message: account.activatedAt
+      ? `Lien de reinitialisation envoye a ${account.email}.`
+      : `Invitation envoyee a ${account.email}.`,
+  };
+}
+
 
 export async function deleteUser(formData: FormData): Promise<void> {
   await requireAdmin();

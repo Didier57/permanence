@@ -4,6 +4,32 @@
 
 Se connecter avec son email et son mot de passe. La deconnexion se fait via le menu lateral.
 
+Un lien **Mot de passe oublie ?** permet de recevoir par email un lien de reinitialisation
+valable 72 heures. L'ancien mot de passe reste valable tant que la reinitialisation n'a pas ete
+terminee ; des qu'une connexion reussit avec l'ancien mot de passe, le lien en attente est annule.
+
+Le menu **Mon compte** (accessible a tous les roles) affiche les informations de connexion et
+permet de changer son propre mot de passe.
+
+## Roles et acces
+
+Chaque personne peut avoir, dans **Personnel**, un champ **Acces a l'application** :
+
+- **Aucun acces** : la personne existe dans le personnel mais ne peut pas se connecter.
+- **Utilisateur (lecture seule)** : consulte uniquement le planning (semaine et mois), sans rien modifier.
+- **Administrateur** : acces complet (planning, personnel, groupes, emails, configuration, historique).
+
+Un **Utilisateur** ne peut pas modifier le planning : le glisser-deposer est desactive pour lui.
+
+## Invitations et reinitialisation
+
+Depuis **Personnel**, le bouton **Inviter** (ou **Renvoyer l'invitation** / **Reinitialiser le
+mot de passe**) envoie a la personne un email contenant un lien unique valable 72 heures.
+Elle y definit elle-meme son mot de passe : aucun mot de passe ne circule par email.
+
+Si l'envoi de l'email echoue, l'application affiche le lien a transmettre manuellement.
+L'invitation est possible seulement si la configuration SMTP est renseignee (menu **Emails**).
+
 ## Personnel
 
 Menu **Personnel** : creer, modifier et rechercher les membres du personnel.

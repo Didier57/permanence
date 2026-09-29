@@ -37,6 +37,7 @@ export default async function PersonnelPage({ searchParams }: PageProps<"/person
       orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
       include: {
         memberships: { include: { group: true } },
+        account: true,
         _count: { select: { permanences: true } },
       },
     }),
@@ -56,6 +57,14 @@ export default async function PersonnelPage({ searchParams }: PageProps<"/person
       .map((membership) => ({ id: membership.groupId, name: membership.group.name }))
       .sort((a, b) => a.name.localeCompare(b.name)),
     permanenceCount: user._count.permanences,
+    accessRole: user.account ? user.account.role : "NONE",
+    accountStatus: !user.account
+      ? "NONE"
+      : !user.account.active
+        ? "DISABLED"
+        : user.account.activatedAt
+          ? "ACTIVE"
+          : "PENDING",
   }));
 
   const groupOptions: GroupOption[] = groups;

@@ -3,6 +3,7 @@ import { z } from "zod";
 const envSchema = z.object({
   DATABASE_URL: z.string().min(1, "DATABASE_URL est requis"),
   APP_SECRET: z.string().min(16, "APP_SECRET doit contenir au moins 16 caracteres"),
+  APP_URL: z.string().default("http://localhost:3000"),
   TIMEZONE: z.string().default("Europe/Paris"),
   LOG_LEVEL: z.string().default("info"),
 });

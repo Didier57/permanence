@@ -27,6 +27,7 @@ async function main() {
         passwordHash,
         role: "ADMIN",
         displayName: "Administrateur",
+        activatedAt: new Date(),
       },
     });
     console.log(`Compte admin cree: ${email}`);
@@ -35,7 +36,8 @@ async function main() {
 
   const passwordMatches = await verify(existing.passwordHash, password).catch(() => false);
   const passwordOutdated = syncPassword && !passwordMatches;
-  const needsRepair = passwordOutdated || existing.role !== "ADMIN" || !existing.active;
+  const needsRepair =
+    passwordOutdated || existing.role !== "ADMIN" || !existing.active || !existing.activatedAt;
 
   if (!needsRepair) {
     console.log(`Compte admin deja a jour: ${email}`);
@@ -46,6 +48,7 @@ async function main() {
     where: { id: existing.id },
     data: {
       ...(passwordOutdated ? { passwordHash: await hash(password, hashOptions) } : {}),
+      ...(existing.activatedAt ? {} : { activatedAt: new Date() }),
       role: "ADMIN",
       active: true,
     },

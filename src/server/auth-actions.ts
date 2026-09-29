@@ -3,7 +3,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { createSession, destroySession } from "@/lib/auth";
+import { createSession, destroySession, invalidateAccountTokens } from "@/lib/auth";
 import { verifyPassword } from "@/lib/crypto";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
@@ -35,10 +35,23 @@ export async function loginAction(
     return { error: "Identifiants invalides." };
   }
 
+  if (!account.activatedAt) {
+    logger.warn({ email }, "login.not-activated");
+    return {
+      error:
+        "Ce compte n'est pas encore active. Utilisez le lien d'activation recu par email ou demandez un nouveau lien.",
+    };
+  }
+
   const passwordOk = await verifyPassword(account.passwordHash, parsed.data.password);
   if (!passwordOk) {
     logger.warn({ email }, "login.failed");
     return { error: "Identifiants invalides." };
+  }
+
+  const invalidated = await invalidateAccountTokens(account.id);
+  if (invalidated > 0) {
+    logger.info({ email, count: invalidated }, "login.invalidated-tokens");
   }
 
   const headerList = await headers();

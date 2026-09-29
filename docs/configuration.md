@@ -9,9 +9,10 @@
 | `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` | oui | Cle stable pour les Server Actions Next.js (identique sur toutes les instances). |
 | `TIMEZONE` | non | Fuseau du planificateur (defaut `Europe/Paris`). |
 | `LOG_LEVEL` | non | Niveau de log pino (defaut `info`, `silent` en test). |
+| `APP_URL` | non | URL publique de l'application (defaut `http://localhost:3000`). Utilisee pour construire les liens d'activation et de reinitialisation envoyes par email. |
+| `ADMIN_SYNC_PASSWORD` | non | `true` (defaut) : le mot de passe du compte admin est re-aligne sur `ADMIN_PASSWORD` a chaque demarrage. `false` pour ne plus y toucher. |
 | `ADMIN_EMAIL` | non | Email du compte admin cree au premier demarrage. |
 | `ADMIN_PASSWORD` | non | Mot de passe du compte admin cree au premier demarrage. |
-| `ADMIN_SYNC_PASSWORD` | non | `true` (defaut) : au demarrage, re-aligne le mot de passe de ce compte sur `ADMIN_PASSWORD` s'il differe. `false` pour desactiver. |
 | `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | non | Identifiants de la base dans `docker-compose.yml`. |
 | `APP_PORT` | non | Port HTTP expose (defaut `3000`). |
 | `RUN_MIGRATIONS`, `RUN_SEED` | non | Controle l'application des migrations et du seed par l'entrypoint (`true` pour `app`). |

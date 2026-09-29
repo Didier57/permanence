@@ -2,7 +2,16 @@
 
 import { useActionState, useCallback, useEffect, useState } from "react";
 import { Alert, Button, Card, Field, Input, Select } from "@/components/ui";
-import { deleteUser, saveUser, type ActionState } from "@/server/personnel-actions";
+import {
+  deleteUser,
+  saveUser,
+  sendAccountInvitation,
+  type ActionState,
+  type InvitationState,
+} from "@/server/personnel-actions";
+
+export type AccessRole = "NONE" | "USER" | "ADMIN";
+export type AccountStatus = "NONE" | "PENDING" | "ACTIVE" | "DISABLED";
 
 export type UserView = {
   id: string;
@@ -15,6 +24,8 @@ export type UserView = {
   groupIds: string[];
   groups: { id: string; name: string }[];
   permanenceCount: number;
+  accessRole: AccessRole;
+  accountStatus: AccountStatus;
 };
 
 export type GroupOption = { id: string; name: string };
@@ -88,6 +99,18 @@ function UserForm({
           Actif
         </label>
 
+        <Field
+          label="Acces a l'application"
+          htmlFor="accessRole"
+          hint="Un utilisateur peut uniquement consulter le planning (semaine / mois). Un administrateur peut tout modifier."
+        >
+          <Select id="accessRole" name="accessRole" defaultValue={user?.accessRole ?? "NONE"}>
+            <option value="NONE">Aucun acces</option>
+            <option value="USER">Utilisateur (lecture seule)</option>
+            <option value="ADMIN">Administrateur</option>
+          </Select>
+        </Field>
+
         {state.error ? <Alert>{state.error}</Alert> : null}
 
         <div className="flex gap-2">
@@ -100,6 +123,62 @@ function UserForm({
         </div>
       </form>
     </Card>
+  );
+}
+
+const ACCOUNT_STATUS_LABEL: Record<AccountStatus, string> = {
+  NONE: "Aucun acces",
+  PENDING: "En attente d'activation",
+  ACTIVE: "Actif",
+  DISABLED: "Acces desactive",
+};
+
+const ACCOUNT_STATUS_STYLE: Record<AccountStatus, string> = {
+  NONE: "bg-slate-100 text-slate-500",
+  PENDING: "bg-amber-100 text-amber-700",
+  ACTIVE: "bg-emerald-100 text-emerald-700",
+  DISABLED: "bg-red-100 text-red-700",
+};
+
+const invitationInitialState: InvitationState = {};
+
+function InvitationButton({ user }: { user: UserView }) {
+  const [state, action, pending] = useActionState(sendAccountInvitation, invitationInitialState);
+
+  const label =
+    user.accountStatus === "ACTIVE"
+      ? "Reinitialiser le mot de passe"
+      : user.accountStatus === "PENDING"
+        ? "Renvoyer l'invitation"
+        : "Inviter";
+
+  return (
+    <div className="flex flex-col items-end gap-1">
+      <form action={action}>
+        <input type="hidden" name="userId" value={user.id} />
+        <input
+          type="hidden"
+          name="role"
+          value={user.accessRole === "NONE" ? "USER" : user.accessRole}
+        />
+        <Button type="submit" variant="secondary" disabled={pending}>
+          {pending ? "Envoi..." : label}
+        </Button>
+      </form>
+
+      {state.error ? <p className="max-w-64 text-right text-xs text-red-600">{state.error}</p> : null}
+      {state.message ? (
+        <p className="max-w-64 text-right text-xs text-slate-500">{state.message}</p>
+      ) : null}
+      {state.link ? (
+        <input
+          readOnly
+          value={state.link}
+          onFocus={(event) => event.currentTarget.select()}
+          className="w-64 rounded border border-slate-300 bg-slate-50 px-2 py-1 text-xs text-slate-600"
+        />
+      ) : null}
+    </div>
   );
 }
 
@@ -173,13 +252,14 @@ export function PersonnelManager({
               <th className="px-4 py-2">Tel. pro</th>
               <th className="px-4 py-2">Tel. prive</th>
               <th className="px-4 py-2">Groupes</th>
+              <th className="px-4 py-2">Acces</th>
               <th className="px-4 py-2 text-right">Actions</th>
             </tr>
           </thead>
           <tbody>
             {users.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-slate-400">
+                <td colSpan={7} className="px-4 py-6 text-center text-slate-400">
                   Aucune personne trouvee.
                 </td>
               </tr>
@@ -214,31 +294,45 @@ export function PersonnelManager({
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        variant="secondary"
-                        onClick={() => {
-                          setEditing(user);
-                          setFormOpen(true);
-                        }}
-                      >
-                        Modifier
-                      </Button>
-                      <form
-                        action={deleteUser}
-                        onSubmit={(event) => {
-                          const message =
-                            user.permanenceCount > 0
-                              ? `${user.firstName} ${user.lastName} possede des permanences historiques : il sera desactive. Continuer ?`
-                              : `Supprimer ${user.firstName} ${user.lastName} ?`;
-                          if (!confirm(message)) event.preventDefault();
-                        }}
-                      >
-                        <input type="hidden" name="id" value={user.id} />
-                        <Button type="submit" variant="danger">
-                          {user.permanenceCount > 0 ? "Desactiver" : "Supprimer"}
+                    <span
+                      className={`rounded px-1.5 py-0.5 text-xs font-medium ${
+                        ACCOUNT_STATUS_STYLE[user.accountStatus]
+                      }`}
+                    >
+                      {user.accessRole === "ADMIN" && user.accountStatus === "ACTIVE"
+                        ? "Administrateur"
+                        : ACCOUNT_STATUS_LABEL[user.accountStatus]}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex flex-col items-end gap-2">
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          variant="secondary"
+                          onClick={() => {
+                            setEditing(user);
+                            setFormOpen(true);
+                          }}
+                        >
+                          Modifier
                         </Button>
-                      </form>
+                        <form
+                          action={deleteUser}
+                          onSubmit={(event) => {
+                            const message =
+                              user.permanenceCount > 0
+                                ? `${user.firstName} ${user.lastName} possede des permanences historiques : il sera desactive. Continuer ?`
+                                : `Supprimer ${user.firstName} ${user.lastName} ?`;
+                            if (!confirm(message)) event.preventDefault();
+                          }}
+                        >
+                          <input type="hidden" name="id" value={user.id} />
+                          <Button type="submit" variant="danger">
+                            {user.permanenceCount > 0 ? "Desactiver" : "Supprimer"}
+                          </Button>
+                        </form>
+                      </div>
+                      <InvitationButton user={user} />
                     </div>
                   </td>
                 </tr>

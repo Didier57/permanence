@@ -32,7 +32,7 @@ import {
   weekDays,
 } from "@/lib/date";
 import { assignPermanence, fillWeek, removePermanence } from "@/server/planning-actions";
-import { resendWeekEmail } from "@/server/email-actions";
+import { resendWeekEmail, sendWeekEmailNow } from "@/server/email-actions";
 
 export type PlanningGroup = {
   id: string;
@@ -288,6 +288,27 @@ export function PlanningView({
       ? `Semaine ${weekInfo.weekNumber} / ${weekInfo.weekYear} - ${formatWeekRangeFr(weekStart, days[6])}`
       : `${monthNameFr(anchorDate.getUTCMonth())} ${anchorDate.getUTCFullYear()}`;
 
+  const [sendingWeek, setSendingWeek] = useState(false);
+
+  function handleSendWeek() {
+    const target = { weekYear: weekInfo.weekYear, weekNumber: weekInfo.weekNumber };
+    const confirmed = window.confirm(
+      `Envoyer par email le planning de la semaine ${target.weekNumber} (${target.weekYear}) ?`,
+    );
+    if (!confirmed) return;
+
+    setSendingWeek(true);
+    startTransition(async () => {
+      const result = await sendWeekEmailNow(target);
+      setSendingWeek(false);
+      if (!result.ok) {
+        setMessage({ tone: "error", text: result.error ?? "Erreur lors de l'envoi." });
+        return;
+      }
+      setMessage({ tone: "success", text: result.message ?? "Planning envoye par email." });
+    });
+  }
+
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <div className="flex flex-1 flex-col gap-4 p-4">
@@ -329,6 +350,11 @@ export function PlanningView({
           />
           <div className="ml-auto flex items-center gap-3">
             {isPending ? <span className="text-xs text-slate-400">Enregistrement...</span> : null}
+            {isAdmin && view === "week" ? (
+              <Button variant="secondary" onClick={handleSendWeek} disabled={sendingWeek}>
+                {sendingWeek ? "Envoi..." : "Envoyer la semaine par email"}
+              </Button>
+            ) : null}
             <span className="text-sm font-medium text-slate-700">{title}</span>
           </div>
         </div>
