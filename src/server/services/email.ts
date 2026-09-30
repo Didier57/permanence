@@ -188,7 +188,8 @@ export function buildWeekEmail(
     text += `${groupTitle}\n`;
     html += `<div style="page-break-inside:avoid;">`;
     html += `<h2 style="font-size:13px;margin:8px 0 2px;page-break-after:avoid;">${escapeHtml(groupTitle)}</h2>`;
-    html += `<table style="border-collapse:collapse;width:100%;font-size:12px;">`;
+    html += `<table style="border-collapse:collapse;width:100%;font-size:12px;table-layout:fixed;">`;
+    html += `<colgroup><col style="width:130px;"><col></colgroup>`;
     for (const range of group.ranges) {
       const label = rangeLabel(days, range.start, range.end, locale);
       const proPhone = range.entry.userProPhone;
@@ -203,7 +204,7 @@ export function buildWeekEmail(
       text += `${label} : ${range.entry.userName} — ${strings.emailLabel} : ${range.entry.userEmail}`;
       text += ` — ${strings.proPhoneLabel} : ${proPhone ?? "—"} — ${strings.privatePhoneLabel} : ${privatePhone ?? "—"}\n`;
       html += `<tr>`;
-      html += `<td style="border:1px solid #e2e8f0;padding:2px 6px;vertical-align:top;white-space:nowrap;">${escapeHtml(label)}</td>`;
+      html += `<td style="border:1px solid #e2e8f0;padding:2px 6px;vertical-align:top;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(label)}</td>`;
       html += `<td style="border:1px solid #e2e8f0;padding:2px 6px;vertical-align:top;">`;
       html += `<div><strong>${escapeHtml(range.entry.userName)}</strong> — ${strings.emailLabel} : ${emailCell}</div>`;
       html += `<div style="color:#475569;">${strings.proPhoneShort} : ${proCell} — ${strings.privatePhoneShort} : ${privateCell}</div>`;

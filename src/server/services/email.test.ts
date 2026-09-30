@@ -203,6 +203,11 @@ describe("buildWeekEmail", () => {
     expect(email.html).not.toContain("font-size:18px");
   });
 
+  it("aligne la colonne des dates a largeur fixe", () => {
+    expect(email.html).toContain("table-layout:fixed;");
+    expect(email.html).toContain('<colgroup><col style="width:130px;"><col></colgroup>');
+  });
+
   it("echappe les caracteres dangereux dans le HTML", () => {
     const dangerous = buildWeekEmail({
       ...snapshot,
