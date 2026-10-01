@@ -144,6 +144,8 @@ export const EN_MESSAGES: Record<string, string> = {
   "Sem.": "Wk.",
   remplir: "fill",
   Retirer: "Remove",
+  "Plier tout": "Collapse all",
+  "Deplier tout": "Expand all",
   "Remplir la semaine {week} (7 jours)": "Fill week {week} (7 days)",
   Groupe: "Group",
   "Glissez une personne sur le planning pour l'affecter.":

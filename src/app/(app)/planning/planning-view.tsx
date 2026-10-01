@@ -15,6 +15,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { Button, Input } from "@/components/ui";
+import { CollapseAllIcon, ExpandAllIcon } from "@/components/icons";
 import { RecipientPickerModal } from "@/components/recipient-picker";
 import {
   addDays,
@@ -554,7 +555,35 @@ export function PlanningView({
 
         <div className="flex flex-1 gap-4">
           <aside className="w-64 shrink-0 self-start rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
-            <h2 className="mb-2 text-sm font-semibold text-slate-700">{t("Groupes")}</h2>
+            <div className="mb-2 flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-slate-700">{t("Groupes")}</h2>
+              {groups.length > 0 ? (
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setCollapsed(
+                        Object.fromEntries(groups.map((group) => [group.id, true])),
+                      )
+                    }
+                    title={t("Plier tout")}
+                    aria-label={t("Plier tout")}
+                    className="rounded-md p-1 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
+                  >
+                    <CollapseAllIcon className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCollapsed({})}
+                    title={t("Deplier tout")}
+                    aria-label={t("Deplier tout")}
+                    className="rounded-md p-1 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
+                  >
+                    <ExpandAllIcon className="h-4 w-4" />
+                  </button>
+                </div>
+              ) : null}
+            </div>
             <p className="mb-3 text-xs text-slate-400">
               {canEdit
                 ? t("Glissez une personne sur le planning pour l'affecter.")

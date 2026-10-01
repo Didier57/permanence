@@ -272,8 +272,43 @@ export function ChevronDownIcon({ className }: IconProps) {
   );
 }
 
-export function GlobeIcon({ className }: IconProps) {
+export function CollapseAllIcon({ className }: IconProps) {
   return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      className={base(className)}
+    >
+      <path d="m7 9 5-5 5 5" />
+      <path d="m7 20 5-5 5 5" />
+    </svg>
+  );
+}
+
+export function ExpandAllIcon({ className }: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      className={base(className)}
+    >
+      <path d="m7 4 5 5 5-5" />
+      <path d="m7 15 5 5 5-5" />
+    </svg>
+  );
+}
+
+export function GlobeIcon({ className }: IconProps) {  return (
     <svg
       viewBox="0 0 24 24"
       fill="none"
