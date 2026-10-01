@@ -518,15 +518,15 @@ export function PlanningView({
             <Button variant="secondary" onClick={() => navigate(view, dateKey(new Date()))}>
               {t("Aujourd'hui")}
             </Button>
+            <Input
+              type="date"
+              value={anchor}
+              onChange={(event) => {
+                if (event.target.value) navigate(view, event.target.value);
+              }}
+              className="w-32! px-1! py-1! text-xs"
+            />
           </div>
-          <Input
-            type="date"
-            value={anchor}
-            onChange={(event) => {
-              if (event.target.value) navigate(view, event.target.value);
-            }}
-            className="w-40"
-          />
           <div className="ml-auto flex items-center gap-3">
             {isPending ? <span className="text-xs text-slate-400">{t("Enregistrement...")}</span> : null}
             {canEdit && view === "week" ? (
