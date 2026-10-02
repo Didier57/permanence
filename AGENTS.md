@@ -12,3 +12,4 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 - Apres chaque fonctionnalite terminee et verifiee (lint, typecheck, tests, build), committer et pousser sur `main` automatiquement, sans demander confirmation a l'utilisateur.
 - Le francais des msgid et de l'interface est volontairement sans accents ; ne pas les "corriger".
+- Ne JAMAIS s'arreter en cours de tache pour demander une confirmation ou "rendre la main". Enchainer toutes les etapes (edition, verifications, commit, push, suivi CI) d'une traite jusqu'a la fin, puis rapporter le resultat en une seule fois.

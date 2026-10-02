@@ -60,7 +60,7 @@ services:
   worker:
     image: ghcr.io/didier57/permanence:latest
     restart: unless-stopped
-    command: ["node_modules/.bin/tsx", "src/worker/index.ts"]
+    command: ["worker_modules/node_modules/.bin/tsx", "src/worker/index.ts"]
     env_file:
       - .env
     environment:

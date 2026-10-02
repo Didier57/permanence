@@ -80,7 +80,7 @@ Le compte administrateur est cree au premier demarrage par le seed, a partir de
    `ADMIN_SYNC_PASSWORD=false`) :
 
    ```bash
-   docker compose exec app node_modules/.bin/prisma db seed
+   docker compose exec app worker_modules/node_modules/.bin/prisma db seed
    ```
 
 3. Pour repartir d'une base vierge (donnees supprimees) :
