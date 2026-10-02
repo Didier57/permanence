@@ -67,9 +67,17 @@ COPY --from=worker-deps /app/node_modules ./worker_modules/node_modules
 
 # tsx est charge par `node --import tsx` (seed Prisma) : cette resolution ESM
 # ignore NODE_PATH, on l'expose donc directement dans node_modules.
-RUN ln -sf ../worker_modules/node_modules/tsx ./node_modules/tsx \
-  && ln -sf ../worker_modules/node_modules/esbuild ./node_modules/esbuild \
-  && ln -sf ../worker_modules/node_modules/.bin/tsx ./node_modules/.bin/tsx
+RUN set -e; \
+  mkdir -p ./node_modules/.bin; \
+  for pkg in tsx esbuild; do \
+    if [ -e "./worker_modules/node_modules/$pkg" ]; then \
+      rm -rf "./node_modules/$pkg"; \
+      ln -s "../worker_modules/node_modules/$pkg" "./node_modules/$pkg"; \
+    fi; \
+  done; \
+  if [ -e "./worker_modules/node_modules/.bin/tsx" ]; then \
+    ln -sf "../../worker_modules/node_modules/.bin/tsx" "./node_modules/.bin/tsx"; \
+  fi
 
 RUN chmod +x ./docker/entrypoint.sh && chown -R node:node /app
 USER node
