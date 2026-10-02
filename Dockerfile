@@ -37,21 +37,11 @@ RUN npm run build
 # ---------------------------------------------------------------------------
 FROM base AS worker-deps
 COPY docker/worker-package.json ./package.json
-# Supprime Prisma Studio et ses dependances lourdes (inutiles pour
-# `migrate deploy`, `migrate status` et `db seed`).
-# NB : `effect` est volontairement CONSERVE, le CLI Prisma l'importe au
-# chargement (sinon « Cannot find module 'effect' »).
+# Ne PAS supprimer de paquets ici : le CLI Prisma (@prisma/engines) importe
+# plusieurs d'entre eux AU CHARGEMENT (ex. `effect`, `@prisma/fetch-engine`).
+# Les retirer casse `migrate deploy`/`db seed` avec « Cannot find module ... ».
 RUN npm install --omit=dev --no-audit --no-fund \
-  && npm cache clean --force \
-  && rm -rf node_modules/@prisma/studio-core \
-    node_modules/@prisma/dev \
-    node_modules/@prisma/query-plan-executor \
-    node_modules/@prisma/fetch-engine \
-    node_modules/@prisma/streams-local \
-    node_modules/@electric-sql \
-    node_modules/elkjs \
-    node_modules/remeda \
-    node_modules/valibot
+  && npm cache clean --force
 
 # ---------------------------------------------------------------------------
 # Image d'execution (application web + worker de planification)
