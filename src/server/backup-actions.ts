@@ -67,9 +67,9 @@ export async function restoreBackupAction(
     revalidatePath("/personnel");
     revalidatePath("/groupes");
     revalidatePath("/emails");
-    revalidatePath("/configuration");
+    revalidatePath("/administration/configuration");
     revalidatePath("/historique");
-    revalidatePath("/backup");
+    revalidatePath("/administration/sauvegarde");
 
     return {
       ok: true,

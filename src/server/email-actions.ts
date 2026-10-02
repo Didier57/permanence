@@ -23,7 +23,7 @@ function generatePublicToken(): string {
   return generateToken(24);
 }
 
-const configSchema = z.object({
+const smtpSchema = z.object({
   smtpHost: z.string().trim().min(1, "Le serveur SMTP est requis").max(255),
   smtpPort: z.coerce.number().int().min(1, "Port invalide").max(65535),
   smtpEncryption: z.enum(["NONE", "STARTTLS", "SSL"]),
@@ -31,6 +31,9 @@ const configSchema = z.object({
   fromAddress: emailAddress,
   fromName: z.string().trim().max(150).optional(),
   replyTo: z.string().trim().optional(),
+});
+
+const schedulingSchema = z.object({
   timezone: z.string().trim().min(1).max(100),
   enabled: z.boolean(),
   introHtml: z.string().max(50000).optional(),
@@ -61,7 +64,7 @@ function parseSchedules(raw: FormDataEntryValue | null): z.infer<typeof schedule
   return parsed.success ? parsed.data : null;
 }
 
-export async function saveEmailConfiguration(
+export async function saveSmtpConfiguration(
   _prev: EmailActionState,
   formData: FormData,
 ): Promise<EmailActionState> {
@@ -71,7 +74,7 @@ export async function saveEmailConfiguration(
     return { error: "Acces refuse." };
   }
 
-  const parsed = configSchema.safeParse({
+  const parsed = smtpSchema.safeParse({
     smtpHost: formData.get("smtpHost"),
     smtpPort: formData.get("smtpPort"),
     smtpEncryption: formData.get("smtpEncryption") ?? "STARTTLS",
@@ -79,21 +82,9 @@ export async function saveEmailConfiguration(
     fromAddress: formData.get("fromAddress"),
     fromName: formData.get("fromName") ?? undefined,
     replyTo: formData.get("replyTo") ?? undefined,
-    timezone: (formData.get("timezone") as string) || "Europe/Paris",
-    enabled: formData.get("enabled") === "on",
-    introHtml: formData.get("introHtml") ?? undefined,
-    outroHtml: formData.get("outroHtml") ?? undefined,
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Donnees invalides." };
-  }
-
-  const schedules = parseSchedules(formData.get("schedules"));
-  if (schedules === null) {
-    return { error: "Creneaux d'envoi invalides." };
-  }
-  if (formData.get("enabled") === "on" && schedules.length === 0) {
-    return { error: "Ajoutez au moins un creneau d'envoi." };
   }
 
   const data = parsed.data;
@@ -125,6 +116,58 @@ export async function saveEmailConfiguration(
     fromName: data.fromName?.trim() ? data.fromName.trim() : null,
     replyTo: replyToRaw || null,
     ccRecipients,
+  };
+
+  if (existing) {
+    await prisma.emailConfiguration.update({ where: { id: "default" }, data: payload });
+  } else {
+    await prisma.emailConfiguration.create({
+      data: {
+        id: "default",
+        ...payload,
+        timezone: "Europe/Paris",
+        enabled: false,
+        introHtml: null,
+        outroHtml: null,
+      },
+    });
+  }
+
+  logger.info({ host: payload.smtpHost }, "email.smtp.saved");
+  revalidatePath("/administration/smtp");
+  return { ok: true, message: "Configuration SMTP enregistree." };
+}
+
+export async function saveEmailConfiguration(
+  _prev: EmailActionState,
+  formData: FormData,
+): Promise<EmailActionState> {
+  try {
+    await requireAdmin();
+  } catch {
+    return { error: "Acces refuse." };
+  }
+
+  const parsed = schedulingSchema.safeParse({
+    timezone: (formData.get("timezone") as string) || "Europe/Paris",
+    enabled: formData.get("enabled") === "on",
+    introHtml: formData.get("introHtml") ?? undefined,
+    outroHtml: formData.get("outroHtml") ?? undefined,
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Donnees invalides." };
+  }
+
+  const schedules = parseSchedules(formData.get("schedules"));
+  if (schedules === null) {
+    return { error: "Creneaux d'envoi invalides." };
+  }
+  if (formData.get("enabled") === "on" && schedules.length === 0) {
+    return { error: "Ajoutez au moins un creneau d'envoi." };
+  }
+
+  const data = parsed.data;
+  const payload = {
     timezone: data.timezone,
     enabled: data.enabled,
     introHtml: data.introHtml ? sanitizeRichText(data.introHtml) : null,
@@ -132,11 +175,22 @@ export async function saveEmailConfiguration(
   };
 
   await prisma.$transaction(async (tx) => {
-    await tx.emailConfiguration.upsert({
-      where: { id: "default" },
-      create: { id: "default", ...payload },
-      update: payload,
-    });
+    const existing = await tx.emailConfiguration.findUnique({ where: { id: "default" } });
+    if (existing) {
+      await tx.emailConfiguration.update({ where: { id: "default" }, data: payload });
+    } else {
+      await tx.emailConfiguration.create({
+        data: {
+          id: "default",
+          ...payload,
+          smtpHost: "",
+          smtpPort: 587,
+          smtpEncryption: "STARTTLS",
+          fromAddress: "",
+          ccRecipients: [],
+        },
+      });
+    }
 
     const keptIds: string[] = [];
     for (const slot of schedules) {
@@ -175,11 +229,11 @@ export async function saveEmailConfiguration(
   });
 
   logger.info(
-    { enabled: payload.enabled, host: payload.smtpHost, schedules: schedules.length },
-    "email.config.saved",
+    { enabled: payload.enabled, schedules: schedules.length },
+    "email.scheduling.saved",
   );
   revalidatePath("/emails");
-  return { ok: true, message: "Configuration SMTP enregistree." };
+  return { ok: true, message: "Envois automatiques enregistres." };
 }
 
 export async function testEmailConfiguration(

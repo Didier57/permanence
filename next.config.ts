@@ -14,6 +14,12 @@ const nextConfig: NextConfig = {
     "nodemailer",
     "pino",
   ],
+  async redirects() {
+    return [
+      { source: "/backup", destination: "/administration/sauvegarde", permanent: false },
+      { source: "/configuration", destination: "/administration/configuration", permanent: false },
+    ];
+  },
 };
 
 export default nextConfig;

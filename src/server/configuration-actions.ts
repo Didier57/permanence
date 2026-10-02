@@ -50,7 +50,7 @@ export async function saveAppConfiguration(
   });
 
   logger.info({ configured: appUrl !== null }, "app.configuration.saved");
-  revalidatePath("/configuration");
+  revalidatePath("/administration/configuration");
 
   return {
     ok: true,

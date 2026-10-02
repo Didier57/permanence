@@ -121,7 +121,7 @@ export async function saveUser(_prev: ActionState, formData: FormData): Promise<
   logger.info({ email, accessRole }, "user.saved");
   revalidatePath("/personnel");
   revalidatePath("/planning");
-  revalidatePath("/configuration");
+  revalidatePath("/administration/configuration");
   return { ok: true, message: "Personne enregistree." };
 }
 
@@ -254,7 +254,7 @@ export async function sendAccountInvitation(
   logger.info({ userId, kind, sent: result.ok, by: admin.email }, "account.invitation");
 
   revalidatePath("/personnel");
-  revalidatePath("/configuration");
+  revalidatePath("/administration/configuration");
 
   if (!result.ok) {
     return {

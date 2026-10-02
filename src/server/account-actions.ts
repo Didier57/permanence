@@ -92,7 +92,7 @@ export async function saveAccount(
   }
 
   logger.info({ email: data.email, role: data.role }, "account.saved");
-  revalidatePath("/configuration");
+  revalidatePath("/administration/configuration");
   return { ok: true, message: "Compte enregistre." };
 }
 
@@ -114,5 +114,5 @@ export async function deleteAccount(formData: FormData): Promise<void> {
 
   await prisma.account.delete({ where: { id } });
   logger.info({ id }, "account.deleted");
-  revalidatePath("/configuration");
+  revalidatePath("/administration/configuration");
 }

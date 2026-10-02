@@ -133,6 +133,24 @@ export function SettingsIcon({ className }: IconProps) {
   );
 }
 
+export function ShieldIcon({ className }: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      className={base(className)}
+    >
+      <path d="M12 3 5 6v5.5c0 4 2.9 7.7 7 9 4.1-1.3 7-5 7-9V6l-7-3Z" />
+      <path d="m9 12 2 2 4-4" />
+    </svg>
+  );
+}
+
 export function UserIcon({ className }: IconProps) {
   return (
     <svg

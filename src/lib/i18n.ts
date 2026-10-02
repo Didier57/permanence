@@ -220,6 +220,12 @@ export const EN_MESSAGES: Record<string, string> = {
   "Envoi des plannings aux personnes concernees.":
     "Send schedules to the people concerned.",
   "Configuration SMTP": "SMTP configuration",
+  "Serveur d'envoi des emails : connexion, expediteur et test.":
+    "Email sending server: connection, sender and test.",
+  "Creneaux et modele du message": "Slots and message template",
+  "Creneaux d'envoi automatique, modele du message et envoi manuel des plannings.":
+    "Automatic send slots, message template and manual sending of schedules.",
+  "Envois automatiques enregistres.": "Automatic sends saved.",
   "Envoi manuel": "Manual send",
   "Envoie immediatement le planning complet d'une semaine a toutes les personnes concernees.":
     "Immediately sends the full schedule of a week to all the people concerned.",

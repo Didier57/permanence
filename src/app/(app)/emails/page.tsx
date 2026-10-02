@@ -10,17 +10,9 @@ import { EmailConfigForm, type EmailConfigView } from "./email-config-form";
 import { ManualSendForm } from "./manual-send-form";
 import { SchedulerStatus, FRESH_MINUTES, type SchedulerSlotView } from "./scheduler-status";
 
-export const metadata = { title: "Emails / SMTP - Permanence" };
+export const metadata = { title: "Emails - Permanence" };
 
 const EMPTY_CONFIG: EmailConfigView = {
-  smtpHost: "",
-  smtpPort: 587,
-  smtpEncryption: "STARTTLS",
-  smtpUser: null,
-  fromAddress: "",
-  fromName: null,
-  replyTo: null,
-  ccRecipients: [],
   schedules: [
     {
       id: "",
@@ -35,7 +27,6 @@ const EMPTY_CONFIG: EmailConfigView = {
   ],
   timezone: "Europe/Paris",
   enabled: false,
-  hasPassword: false,
   introHtml: "",
   outroHtml: "",
 };
@@ -79,18 +70,9 @@ export default async function EmailsPage() {
   }));
   const config: EmailConfigView = record
     ? {
-        smtpHost: record.smtpHost,
-        smtpPort: record.smtpPort,
-        smtpEncryption: record.smtpEncryption,
-        smtpUser: record.smtpUser,
-        fromAddress: record.fromAddress,
-        fromName: record.fromName,
-        replyTo: record.replyTo,
-        ccRecipients: record.ccRecipients,
         schedules: scheduleRows,
         timezone: record.timezone,
         enabled: record.enabled,
-        hasPassword: Boolean(record.smtpPasswordEncrypted),
         introHtml: record.introHtml ?? "",
         outroHtml: record.outroHtml ?? "",
       }
@@ -140,10 +122,10 @@ export default async function EmailsPage() {
   return (
     <>
       <PageHeader
-        title={<T msg="Emails / SMTP" />}
+        title={<T msg="Emails" />}
         description={
           isAdmin ? (
-            <T msg="Configuration du serveur SMTP et envoi des plannings aux personnes concernees." />
+            <T msg="Creneaux d'envoi automatique, modele du message et envoi manuel des plannings." />
           ) : (
             <T msg="Envoi des plannings aux personnes concernees." />
           )
@@ -153,9 +135,9 @@ export default async function EmailsPage() {
         {isAdmin ? (
           <Card className="p-6">
             <h2 className="mb-4 text-base font-semibold text-slate-800">
-              <T msg="Configuration SMTP" />
+              <T msg="Creneaux et modele du message" />
             </h2>
-            <EmailConfigForm config={config} accountEmail={account.email} directory={directory} />
+            <EmailConfigForm config={config} directory={directory} />
           </Card>
         ) : null}
 
