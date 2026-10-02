@@ -15,6 +15,7 @@ import { getEnv } from "@/lib/env";
 import { htmlToPlainText, sanitizeRichText } from "@/lib/html";
 import { selectRecipients } from "@/lib/recipients";
 import { logger } from "@/lib/logger";
+import { getAppUrl } from "./app-config";
 import {
   createTransport,
   formatFromAddress,
@@ -497,7 +498,7 @@ export async function sendWeekLinkEmail(options: {
   });
   const localeByEmail = new Map(users.map((user) => [user.email, resolveLocale(user.locale)]));
   const builtByLocale = new Map<Locale, WeekLinkEmail>();
-  const url = buildPublicWeekUrl(options.token);
+  const url = buildPublicWeekUrl(options.token, await getAppUrl());
   function linkForLocale(locale: Locale): WeekLinkEmail {
     const cached = builtByLocale.get(locale);
     if (cached) return cached;
