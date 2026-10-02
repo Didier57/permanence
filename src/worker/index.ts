@@ -3,6 +3,7 @@ import cron from "node-cron";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { getEmailConfig, sendWeekEmail, sendWeekLinkEmail } from "@/server/services/email";
+import { getTimezone } from "@/server/services/app-config";
 import { checkDatabase, databaseLabel } from "./database";
 import { DEFAULT_CATCH_UP_MINUTES, findDueSlots, findMissedSlots } from "./schedule";
 
@@ -41,7 +42,7 @@ export async function runTick(
   const result: TickResult = { status: "done", sent: 0, skipped: 0, empty: 0, errors: [], details: [] };
   if (!config) return { ...result, status: "disabled" };
 
-  const scope = { enabled: config.enabled, timezone: config.timezone };
+  const scope = { enabled: config.enabled, timezone: await getTimezone() };
   const slots = await prisma.emailSchedule.findMany({
     orderBy: [{ dayOfWeek: "asc" }, { sendTime: "asc" }],
   });

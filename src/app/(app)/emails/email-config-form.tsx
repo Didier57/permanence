@@ -22,7 +22,6 @@ export type EmailScheduleView = {
 
 export type EmailConfigView = {
   schedules: EmailScheduleView[];
-  timezone: string;
   enabled: boolean;
   introHtml: string;
   outroHtml: string;
@@ -122,12 +121,6 @@ export function EmailConfigForm({
               <input type="checkbox" name="enabled" defaultChecked={config.enabled} className="h-4 w-4" />
               {t("Active")}
             </label>
-          </div>
-
-          <div className="grid items-end gap-4 md:grid-cols-2">
-            <Field label={t("Fuseau horaire")} htmlFor="timezone">
-              <Input id="timezone" name="timezone" defaultValue={config.timezone} required />
-            </Field>
           </div>
 
           <div className="flex flex-col gap-3">

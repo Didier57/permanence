@@ -34,7 +34,6 @@ const smtpSchema = z.object({
 });
 
 const schedulingSchema = z.object({
-  timezone: z.string().trim().min(1).max(100),
   enabled: z.boolean(),
   introHtml: z.string().max(50000).optional(),
   outroHtml: z.string().max(50000).optional(),
@@ -149,7 +148,6 @@ export async function saveEmailConfiguration(
   }
 
   const parsed = schedulingSchema.safeParse({
-    timezone: (formData.get("timezone") as string) || "Europe/Paris",
     enabled: formData.get("enabled") === "on",
     introHtml: formData.get("introHtml") ?? undefined,
     outroHtml: formData.get("outroHtml") ?? undefined,
@@ -168,7 +166,6 @@ export async function saveEmailConfiguration(
 
   const data = parsed.data;
   const payload = {
-    timezone: data.timezone,
     enabled: data.enabled,
     introHtml: data.introHtml ? sanitizeRichText(data.introHtml) : null,
     outroHtml: data.outroHtml ? sanitizeRichText(data.outroHtml) : null,

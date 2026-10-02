@@ -76,7 +76,11 @@ export type BackupData = {
     introHtml: string | null;
     outroHtml: string | null;
   } | null;
-  appConfiguration: { appUrl: string | null; callCenterEmail: string | null } | null;
+  appConfiguration: {
+    appUrl: string | null;
+    callCenterEmail: string | null;
+    timezone: string;
+  } | null;
 };
 
 export async function createBackup(): Promise<BackupData> {
@@ -178,7 +182,11 @@ export async function createBackup(): Promise<BackupData> {
         }
       : null,
     appConfiguration: appConfiguration
-      ? { appUrl: appConfiguration.appUrl, callCenterEmail: appConfiguration.callCenterEmail }
+      ? {
+          appUrl: appConfiguration.appUrl,
+          callCenterEmail: appConfiguration.callCenterEmail,
+          timezone: appConfiguration.timezone,
+        }
       : null,
   };
 }
@@ -285,7 +293,11 @@ const backupSchema = z.object({
     })
     .nullish(),
     appConfiguration: z
-      .object({ appUrl: z.string().nullish(), callCenterEmail: z.string().nullish() })
+      .object({
+        appUrl: z.string().nullish(),
+        callCenterEmail: z.string().nullish(),
+        timezone: z.string().nullish(),
+      })
       .nullish(),
 });
 
@@ -566,13 +578,19 @@ export async function restoreBackup(input: unknown, mode: RestoreMode): Promise<
         emailConfigurationSaved = true;
       }
 
-      if (data.appConfiguration && (data.appConfiguration.appUrl || data.appConfiguration.callCenterEmail)) {
+      if (
+        data.appConfiguration &&
+        (data.appConfiguration.appUrl ||
+          data.appConfiguration.callCenterEmail ||
+          data.appConfiguration.timezone)
+      ) {
         const appUrl = data.appConfiguration.appUrl?.replace(/\/+$/, "") ?? null;
         const callCenterEmail = data.appConfiguration.callCenterEmail?.trim() || null;
+        const timezone = data.appConfiguration.timezone?.trim() || "Europe/Paris";
         await tx.appConfiguration.upsert({
           where: { id: "default" },
-          create: { id: "default", appUrl, callCenterEmail },
-          update: { appUrl, callCenterEmail },
+          create: { id: "default", appUrl, callCenterEmail, timezone },
+          update: { appUrl, callCenterEmail, timezone },
         });
         appConfigurationSaved = true;
       }

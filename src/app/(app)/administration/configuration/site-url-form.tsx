@@ -14,10 +14,12 @@ export function SiteUrlForm({
   configuredUrl,
   effectiveUrl,
   callCenterEmail,
+  timezone,
 }: {
   configuredUrl: string;
   effectiveUrl: string;
   callCenterEmail: string;
+  timezone: string;
 }) {
   const [state, formAction, pending] = useActionState(saveAppConfiguration, INITIAL);
   const t = useTranslations();
@@ -51,6 +53,14 @@ export function SiteUrlForm({
           defaultValue={callCenterEmail}
           autoComplete="off"
         />
+      </Field>
+
+      <Field
+        label={t("Fuseau horaire")}
+        htmlFor="timezone"
+        hint={t("Fuseau utilise pour les envois automatiques et les liens du planning.")}
+      >
+        <Input id="timezone" name="timezone" defaultValue={timezone} required />
       </Field>
 
       {state.error ? <Alert tone="error">{t(state.error)}</Alert> : null}

@@ -31,3 +31,17 @@ export async function getCallCenterEmail(): Promise<string | null> {
   const config = await getAppConfiguration();
   return normalizeEmail(config?.callCenterEmail);
 }
+
+export function normalizeTimezone(value: string | null | undefined): string | null {
+  const trimmed = (value ?? "").trim();
+  return trimmed ? trimmed : null;
+}
+
+export async function getTimezone(): Promise<string> {
+  const config = await getAppConfiguration();
+  return (
+    normalizeTimezone(config?.timezone) ??
+    normalizeTimezone(getEnv().TIMEZONE) ??
+    "Europe/Paris"
+  );
+}

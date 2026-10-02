@@ -69,6 +69,7 @@ export default async function ConfigurationPage() {
             configuredUrl={appConfiguration?.appUrl ?? ""}
             effectiveUrl={effectiveUrl}
             callCenterEmail={appConfiguration?.callCenterEmail ?? ""}
+            timezone={appConfiguration?.timezone ?? "Europe/Paris"}
           />
         </Card>
 

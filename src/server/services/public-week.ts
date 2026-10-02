@@ -1,7 +1,7 @@
 import { addDays, dateKey, fromDateInput, getISOWeekInfo, publicLinkExpiry, startOfISOWeek } from "@/lib/date";
 import { prisma } from "@/lib/db";
 import { getWeekSnapshot, type PlanningEntry } from "./planning";
-import { getEmailConfig } from "./email";
+import { getTimezone } from "./app-config";
 
 export type PublicWeekGroup = {
   id: string;
@@ -50,8 +50,7 @@ export async function getPublicWeekByToken(
   });
   if (!slot || slot.kind !== "CALLCENTER") return { ok: false, reason: "invalid" };
 
-  const config = await getEmailConfig();
-  const timezone = config?.timezone || "Europe/Paris";
+  const timezone = await getTimezone();
 
   // Semaine visee aujourd'hui par ce creneau, dans son fuseau.
   const now = new Date();

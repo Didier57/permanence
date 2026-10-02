@@ -123,7 +123,7 @@ export function PublicWeekPlanning({ view }: { view: PublicWeekView }) {
           </p>
         ) : (
           <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
-            <table className="w-full min-w-[800px] border-collapse">
+            <table className="w-full table-fixed border-collapse">
               <thead>
                 <tr>
                   <th className="w-40 border-b border-slate-200 p-2 text-left text-xs uppercase text-slate-500">
@@ -163,12 +163,12 @@ export function PublicWeekPlanning({ view }: { view: PublicWeekView }) {
                           {entry ? (
                             <div
                               style={{ borderLeftColor: group.color ?? "#0ea5e9" }}
-                              className="rounded border border-slate-200 border-l-4 bg-white px-2 py-1 text-xs text-slate-700"
+                              className="flex min-w-0 items-center rounded border border-slate-200 border-l-4 bg-white px-2 py-1 text-xs text-slate-700"
                             >
                               <button
                                 type="button"
                                 onClick={() => setSelectedUserId(entry.userId)}
-                                className="truncate text-left hover:underline"
+                                className="min-w-0 truncate text-left hover:underline"
                               >
                                 {entry.userName}
                               </button>

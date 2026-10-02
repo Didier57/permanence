@@ -376,6 +376,8 @@ export const EN_MESSAGES: Record<string, string> = {
   "Email CallCenter": "Call center email",
   "Cette adresse recoit automatiquement le lien du planning pour chaque creneau CallCenter.":
     "This address automatically receives the schedule link for every Call center slot.",
+  "Fuseau utilise pour les envois automatiques et les liens du planning.":
+    "Time zone used for automatic sends and schedule links.",
   "Configuration enregistree.": "Configuration saved.",
   "Comptes et droits": "Accounts and rights",
   Informations: "Information",

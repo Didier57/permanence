@@ -6,6 +6,7 @@ import { getCurrentAccount, isManagerRole } from "@/lib/auth";
 import { dateKey, toUTCDateOnly } from "@/lib/date";
 import { prisma } from "@/lib/db";
 import { nextSlotDateKey, targetWeek } from "@/worker/schedule";
+import { getTimezone } from "@/server/services/app-config";
 import { EmailConfigForm, type EmailConfigView } from "./email-config-form";
 import { ManualSendForm } from "./manual-send-form";
 import { SchedulerStatus, FRESH_MINUTES, type SchedulerSlotView } from "./scheduler-status";
@@ -25,7 +26,6 @@ const EMPTY_CONFIG: EmailConfigView = {
       publicToken: null,
     },
   ],
-  timezone: "Europe/Paris",
   enabled: false,
   introHtml: "",
   outroHtml: "",
@@ -71,7 +71,6 @@ export default async function EmailsPage() {
   const config: EmailConfigView = record
     ? {
         schedules: scheduleRows,
-        timezone: record.timezone,
         enabled: record.enabled,
         introHtml: record.introHtml ?? "",
         outroHtml: record.outroHtml ?? "",
@@ -80,6 +79,8 @@ export default async function EmailsPage() {
         ...EMPTY_CONFIG,
         schedules: scheduleRows.length > 0 ? scheduleRows : EMPTY_CONFIG.schedules,
       };
+
+  const timezone = await getTimezone();
 
   const now = new Date();
 
@@ -100,7 +101,7 @@ export default async function EmailsPage() {
 
   const schedulerSlots: SchedulerSlotView[] = isAdmin
     ? schedules.map((schedule) => {
-        const nextKey = nextSlotDateKey(schedule, config.timezone, now);
+        const nextKey = nextSlotDateKey(schedule, timezone, now);
         const last = lastAutomaticBySlot.get(schedule.id);
         return {
           id: schedule.id,
@@ -144,7 +145,7 @@ export default async function EmailsPage() {
         {isAdmin ? (
           <SchedulerStatus
             status={{
-              timezone: config.timezone,
+              timezone,
               enabled: config.enabled,
               lastTickAt: record?.lastTickAt ? record.lastTickAt.toISOString() : null,
               lastTickStatus: record?.lastTickStatus ?? null,

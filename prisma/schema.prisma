@@ -221,6 +221,7 @@ model AppConfiguration {
   id              String   @id @default("default")
   appUrl          String?  @map("app_url")
   callCenterEmail String?  @map("call_center_email")
+  timezone        String   @default("Europe/Paris")
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
