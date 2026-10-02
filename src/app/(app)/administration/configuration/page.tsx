@@ -68,6 +68,7 @@ export default async function ConfigurationPage() {
           <SiteUrlForm
             configuredUrl={appConfiguration?.appUrl ?? ""}
             effectiveUrl={effectiveUrl}
+            callCenterEmail={appConfiguration?.callCenterEmail ?? ""}
           />
         </Card>
 

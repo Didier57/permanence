@@ -5,7 +5,7 @@ import { z } from "zod";
 import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
-import { normalizeAppUrl } from "./services/app-config";
+import { normalizeAppUrl, normalizeEmail } from "./services/app-config";
 
 export type AppConfigurationActionState = {
   ok?: boolean;
@@ -22,6 +22,14 @@ const schema = z.object({
       (value) => value === "" || /^https?:\/\/[^\s/]+\.[^\s/]+/i.test(value),
       "Adresse invalide. Utilisez le format https://exemple.fr",
     ),
+  callCenterEmail: z
+    .string()
+    .trim()
+    .max(320)
+    .refine(
+      (value) => value === "" || z.string().email().safeParse(value).success,
+      "Adresse email invalide.",
+    ),
 });
 
 export async function saveAppConfiguration(
@@ -36,17 +44,19 @@ export async function saveAppConfiguration(
 
   const parsed = schema.safeParse({
     appUrl: formData.get("appUrl") ?? "",
+    callCenterEmail: formData.get("callCenterEmail") ?? "",
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Adresse invalide." };
   }
 
   const appUrl = normalizeAppUrl(parsed.data.appUrl);
+  const callCenterEmail = normalizeEmail(parsed.data.callCenterEmail);
 
   await prisma.appConfiguration.upsert({
     where: { id: "default" },
-    create: { id: "default", appUrl },
-    update: { appUrl },
+    create: { id: "default", appUrl, callCenterEmail },
+    update: { appUrl, callCenterEmail },
   });
 
   logger.info({ configured: appUrl !== null }, "app.configuration.saved");
@@ -54,8 +64,6 @@ export async function saveAppConfiguration(
 
   return {
     ok: true,
-    message: appUrl
-      ? "Adresse du site enregistree."
-      : "Adresse du site reinitialisee (valeur par defaut).",
+    message: "Configuration enregistree.",
   };
 }

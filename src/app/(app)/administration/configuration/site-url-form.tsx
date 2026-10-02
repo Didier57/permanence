@@ -13,9 +13,11 @@ const INITIAL: AppConfigurationActionState = {};
 export function SiteUrlForm({
   configuredUrl,
   effectiveUrl,
+  callCenterEmail,
 }: {
   configuredUrl: string;
   effectiveUrl: string;
+  callCenterEmail: string;
 }) {
   const [state, formAction, pending] = useActionState(saveAppConfiguration, INITIAL);
   const t = useTranslations();
@@ -33,6 +35,20 @@ export function SiteUrlForm({
           type="url"
           defaultValue={configuredUrl}
           placeholder={effectiveUrl}
+          autoComplete="off"
+        />
+      </Field>
+
+      <Field
+        label={t("Email CallCenter")}
+        htmlFor="callCenterEmail"
+        hint={t("Cette adresse recoit automatiquement le lien du planning pour chaque creneau CallCenter.")}
+      >
+        <Input
+          id="callCenterEmail"
+          name="callCenterEmail"
+          type="email"
+          defaultValue={callCenterEmail}
           autoComplete="off"
         />
       </Field>

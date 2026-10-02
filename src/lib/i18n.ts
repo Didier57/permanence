@@ -367,6 +367,10 @@ export const EN_MESSAGES: Record<string, string> = {
     "Used to build the links sent by email (activation, reset). Leave empty to use the default value.",
   "Adresse actuellement utilisee :": "Address currently in use:",
   "Enregistrer l'adresse": "Save the address",
+  "Email CallCenter": "Call center email",
+  "Cette adresse recoit automatiquement le lien du planning pour chaque creneau CallCenter.":
+    "This address automatically receives the schedule link for every Call center slot.",
+  "Configuration enregistree.": "Configuration saved.",
   "Comptes et droits": "Accounts and rights",
   Informations: "Information",
   "Numeros de semaine": "Week numbers",

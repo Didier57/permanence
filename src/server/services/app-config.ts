@@ -21,3 +21,13 @@ export async function getAppUrl(): Promise<string> {
     "http://localhost:3000"
   );
 }
+
+export function normalizeEmail(value: string | null | undefined): string | null {
+  const trimmed = (value ?? "").trim();
+  return trimmed ? trimmed : null;
+}
+
+export async function getCallCenterEmail(): Promise<string | null> {
+  const config = await getAppConfiguration();
+  return normalizeEmail(config?.callCenterEmail);
+}

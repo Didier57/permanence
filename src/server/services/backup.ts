@@ -76,7 +76,7 @@ export type BackupData = {
     introHtml: string | null;
     outroHtml: string | null;
   } | null;
-  appConfiguration: { appUrl: string | null } | null;
+  appConfiguration: { appUrl: string | null; callCenterEmail: string | null } | null;
 };
 
 export async function createBackup(): Promise<BackupData> {
@@ -177,7 +177,9 @@ export async function createBackup(): Promise<BackupData> {
           outroHtml: emailConfiguration.outroHtml,
         }
       : null,
-    appConfiguration: appConfiguration ? { appUrl: appConfiguration.appUrl } : null,
+    appConfiguration: appConfiguration
+      ? { appUrl: appConfiguration.appUrl, callCenterEmail: appConfiguration.callCenterEmail }
+      : null,
   };
 }
 
@@ -282,7 +284,9 @@ const backupSchema = z.object({
       outroHtml: z.string().nullish(),
     })
     .nullish(),
-  appConfiguration: z.object({ appUrl: z.string().nullish() }).nullish(),
+    appConfiguration: z
+      .object({ appUrl: z.string().nullish(), callCenterEmail: z.string().nullish() })
+      .nullish(),
 });
 
 export type RestoreMode = "replace" | "merge";
@@ -562,12 +566,13 @@ export async function restoreBackup(input: unknown, mode: RestoreMode): Promise<
         emailConfigurationSaved = true;
       }
 
-      if (data.appConfiguration && data.appConfiguration.appUrl) {
-        const appUrl = data.appConfiguration.appUrl.replace(/\/+$/, "");
+      if (data.appConfiguration && (data.appConfiguration.appUrl || data.appConfiguration.callCenterEmail)) {
+        const appUrl = data.appConfiguration.appUrl?.replace(/\/+$/, "") ?? null;
+        const callCenterEmail = data.appConfiguration.callCenterEmail?.trim() || null;
         await tx.appConfiguration.upsert({
           where: { id: "default" },
-          create: { id: "default", appUrl },
-          update: { appUrl },
+          create: { id: "default", appUrl, callCenterEmail },
+          update: { appUrl, callCenterEmail },
         });
         appConfigurationSaved = true;
       }

@@ -218,10 +218,11 @@ model EmailSchedule {
 }
 
 model AppConfiguration {
-  id        String   @id @default("default")
-  appUrl    String?  @map("app_url")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id              String   @id @default("default")
+  appUrl          String?  @map("app_url")
+  callCenterEmail String?  @map("call_center_email")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
 
   @@map("app_configuration")
 }

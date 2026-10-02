@@ -15,7 +15,7 @@ import { getEnv } from "@/lib/env";
 import { htmlToPlainText, sanitizeRichText } from "@/lib/html";
 import { selectRecipients } from "@/lib/recipients";
 import { logger } from "@/lib/logger";
-import { getAppUrl } from "./app-config";
+import { getAppUrl, getCallCenterEmail } from "./app-config";
 import {
   createTransport,
   formatFromAddress,
@@ -482,7 +482,18 @@ export async function sendWeekLinkEmail(options: {
     return { ok: false, error: "Configuration SMTP incomplete." };
   }
 
-  const recipients = [...new Set(options.recipients.map((value) => value.trim()).filter(Boolean))];
+  const callCenter = await getCallCenterEmail();
+  const requested = callCenter ? [...options.recipients, callCenter] : options.recipients;
+  const seen = new Set<string>();
+  const recipients: string[] = [];
+  for (const value of requested) {
+    const trimmed = value.trim();
+    if (!trimmed) continue;
+    const lower = trimmed.toLowerCase();
+    if (seen.has(lower)) continue;
+    seen.add(lower);
+    recipients.push(trimmed);
+  }
   if (recipients.length === 0) {
     return { ok: false, error: "Aucun destinataire identifie." };
   }
