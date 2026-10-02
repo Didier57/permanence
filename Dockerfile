@@ -59,10 +59,6 @@ RUN npm install --omit=dev --no-audit --no-fund \
 FROM base AS runner
 ENV NODE_ENV=production
 ENV PORT=3000
-# Le serveur standalone de Next se lie a process.env.HOSTNAME ; Docker definit
-# cette variable avec l'ID du conteneur, ce qui casserait le healthcheck
-# (127.0.0.1:3000). On force l'ecoute sur toutes les interfaces.
-ENV HOSTNAME=0.0.0.0
 # Le worker et les commandes Prisma resolvent leurs dependances ici.
 ENV NODE_PATH=/app/worker_modules/node_modules
 
@@ -102,4 +98,8 @@ USER node
 EXPOSE 3000
 
 ENTRYPOINT ["./docker/entrypoint.sh"]
-CMD ["node", "server.js"]
+# Le serveur standalone de Next se lie a process.env.HOSTNAME. Docker definit
+# TOUJOURS cette variable avec l'ID du conteneur (elle ecrase l'ENV de l'image),
+# ce qui casserait le healthcheck (127.0.0.1:3000). On la force donc au runtime
+# juste avant de lancer le serveur.
+CMD ["sh", "-c", "HOSTNAME=0.0.0.0 exec node server.js"]
