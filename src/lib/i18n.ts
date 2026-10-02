@@ -168,6 +168,12 @@ export const EN_MESSAGES: Record<string, string> = {
   "Envoyer par email le planning de la semaine {week} ({year}) ?":
     "Email the schedule for week {week} ({year})?",
   "Erreur lors de l'envoi.": "Error while sending.",
+  "Erreur lors de l'enregistrement.": "Error while saving.",
+  "Erreur lors de la suppression.": "Error while deleting.",
+  "Erreur lors du remplissage de la semaine.": "Error while filling the week.",
+  "Personne enregistree.": "Person saved.",
+  "Utilisateur inconnu.": "Unknown user.",
+  "Cet email est deja utilise par une autre personne.": "This email is already used by another person.",
   "Planning envoye par email.": "Schedule sent by email.",
   "La modification de la semaine en cours n'a pas ete envoyee.":
     "The change to the current week has not been sent.",

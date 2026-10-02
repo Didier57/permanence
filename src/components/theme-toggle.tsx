@@ -24,7 +24,7 @@ export function ThemeToggle() {
       type="button"
       onClick={toggleTheme}
       title={t("Basculer entre le theme clair et sombre")}
-      aria-label="Basculer entre le thème clair et sombre"
+      aria-label={t("Basculer entre le theme clair et sombre")}
       className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100 sidebar-collapsed:justify-center sidebar-collapsed:px-2"
     >
       <MoonIcon className="h-5 w-5 shrink-0 dark:hidden" />

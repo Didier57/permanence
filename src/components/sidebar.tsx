@@ -115,7 +115,7 @@ export function Sidebar({
           type="button"
           onClick={toggleCollapsed}
           title={t("Reduire ou deplier le menu")}
-          aria-label="RǸduire ou dǸplier le menu"
+          aria-label={t("Reduire ou deplier le menu")}
           className="rounded-md p-1.5 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
         >
           <ChevronLeftIcon className="h-5 w-5 sidebar-collapsed:hidden" />

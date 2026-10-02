@@ -483,7 +483,7 @@ export function PlanningView({
         <div className="flex flex-wrap items-center gap-3 rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
           {showUnsentWarning ? (
             <span className="text-base font-bold text-red-600">
-              {t("La modification de la semaine en cours n'a pas été envoyée.")}
+              {t("La modification de la semaine en cours n'a pas ete envoyee.")}
             </span>
           ) : null}
           <div className="flex overflow-hidden rounded-md border border-slate-300">
