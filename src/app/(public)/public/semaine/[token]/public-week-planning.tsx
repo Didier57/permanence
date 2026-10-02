@@ -100,7 +100,7 @@ export function PublicWeekPlanning({ view }: { view: PublicWeekView }) {
 
   return (
     <div className="min-h-screen bg-slate-50 p-4">
-      <div className="mx-auto max-w-5xl">
+      <div className="mx-auto w-full max-w-[1600px]">
         <header className="mb-4">
           <h1 className="text-xl font-bold text-slate-900">
             <T msg="Planning des permanences" />
