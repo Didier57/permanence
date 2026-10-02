@@ -37,8 +37,21 @@ RUN npm run build
 # ---------------------------------------------------------------------------
 FROM base AS worker-deps
 COPY docker/worker-package.json ./package.json
+# Supprime Prisma Studio et ses dependances lourdes (inutiles pour
+# `migrate deploy`, `migrate status` et `db seed`).
+# NB : `effect` est volontairement CONSERVE, le CLI Prisma l'importe au
+# chargement (sinon « Cannot find module 'effect' »).
 RUN npm install --omit=dev --no-audit --no-fund \
-  && npm cache clean --force
+  && npm cache clean --force \
+  && rm -rf node_modules/@prisma/studio-core \
+    node_modules/@prisma/dev \
+    node_modules/@prisma/query-plan-executor \
+    node_modules/@prisma/fetch-engine \
+    node_modules/@prisma/streams-local \
+    node_modules/@electric-sql \
+    node_modules/elkjs \
+    node_modules/remeda \
+    node_modules/valibot
 
 # ---------------------------------------------------------------------------
 # Image d'execution (application web + worker de planification)
@@ -46,6 +59,10 @@ RUN npm install --omit=dev --no-audit --no-fund \
 FROM base AS runner
 ENV NODE_ENV=production
 ENV PORT=3000
+# Le serveur standalone de Next se lie a process.env.HOSTNAME ; Docker definit
+# cette variable avec l'ID du conteneur, ce qui casserait le healthcheck
+# (127.0.0.1:3000). On force l'ecoute sur toutes les interfaces.
+ENV HOSTNAME=0.0.0.0
 # Le worker et les commandes Prisma resolvent leurs dependances ici.
 ENV NODE_PATH=/app/worker_modules/node_modules
 
