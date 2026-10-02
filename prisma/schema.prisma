@@ -30,6 +30,13 @@ enum EmailSendStatus {
   ERROR
 }
 
+/// Nature d'un envoi : le planning complet (PERSONNEL) ou un simple lien public
+/// vers la semaine (CALLCENTER).
+enum EmailScheduleKind {
+  PERSONNEL
+  CALLCENTER
+}
+
 enum AccountTokenType {
   ACTIVATION
   RESET
@@ -195,6 +202,13 @@ model EmailSchedule {
   sendTime   String   @map("send_time")
   weekOffset Int      @default(1) @map("week_offset")
   enabled    Boolean  @default(true)
+  /// PERSONNEL : email du planning ; CALLCENTER : email contenant un lien.
+  kind       EmailScheduleKind @default(PERSONNEL)
+  /// Destinataires supplementaires (adresses email) en plus des personnes
+  /// concernees par la semaine.
+  extraRecipients String[] @default([]) @map("extra_recipients")
+  /// Jeton secret stable du lien public (uniquement pour CALLCENTER).
+  publicToken String? @unique @map("public_token")
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
 
@@ -236,6 +250,7 @@ model EmailHistory {
   weekEnd           DateTime        @db.Date @map("week_end")
   sentAt            DateTime        @default(now()) @map("sent_at")
   type              EmailSendType   @default(MANUAL)
+  kind              EmailScheduleKind @default(PERSONNEL)
   recipients        String[]        @default([])
   ccRecipients      String[]        @default([]) @map("cc_recipients")
   status            EmailSendStatus @default(SUCCESS)

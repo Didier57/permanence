@@ -2,7 +2,7 @@ import cron from "node-cron";
 
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
-import { getEmailConfig, sendWeekEmail } from "@/server/services/email";
+import { getEmailConfig, sendWeekEmail, sendWeekLinkEmail } from "@/server/services/email";
 import { checkDatabase, databaseLabel } from "./database";
 import { DEFAULT_CATCH_UP_MINUTES, findDueSlots, findMissedSlots } from "./schedule";
 
@@ -72,12 +72,23 @@ export async function runTick(
       continue;
     }
 
-    const send = await sendWeekEmail({
-      weekYear: item.weekYear,
-      weekNumber: item.weekNumber,
-      type: "AUTOMATIC",
-      scheduleId: item.id,
-    });
+    const send =
+      item.kind === "CALLCENTER" && item.publicToken
+        ? await sendWeekLinkEmail({
+            weekYear: item.weekYear,
+            weekNumber: item.weekNumber,
+            type: "AUTOMATIC",
+            scheduleId: item.id,
+            token: item.publicToken,
+            recipients: item.extraRecipients,
+          })
+        : await sendWeekEmail({
+            weekYear: item.weekYear,
+            weekNumber: item.weekNumber,
+            type: "AUTOMATIC",
+            scheduleId: item.id,
+            recipients: item.kind === "PERSONNEL" && item.extraRecipients.length > 0 ? item.extraRecipients : undefined,
+          });
     if (!send.ok) {
       if (send.error === "Aucune permanence pour cette semaine.") {
         result.empty += 1;

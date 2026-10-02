@@ -9,10 +9,14 @@ const PUBLIC_PATHS = [
   "/reinitialiser",
 ];
 
+const PUBLIC_PREFIXES = ["/public/semaine/"];
+
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const hasSession = request.cookies.has(SESSION_COOKIE);
-  const isPublic = PUBLIC_PATHS.includes(pathname);
+  const isPublic =
+    PUBLIC_PATHS.includes(pathname) ||
+    PUBLIC_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 
   if (pathname === "/login") {
     if (hasSession) {

@@ -164,9 +164,19 @@ export type ScheduleSlot = {
   sendTime: string;
   weekOffset: number;
   enabled: boolean;
+  kind?: "PERSONNEL" | "CALLCENTER";
+  extraRecipients?: string[];
+  publicToken?: string | null;
 };
 
-export type DueSlot = { id: string; weekYear: number; weekNumber: number };
+export type DueSlot = {
+  id: string;
+  kind: "PERSONNEL" | "CALLCENTER";
+  weekYear: number;
+  weekNumber: number;
+  extraRecipients: string[];
+  publicToken: string | null;
+};
 
 /** Fenetre de rattrapage par defaut (minutes) appliquee au demarrage du worker. */
 export const DEFAULT_CATCH_UP_MINUTES = 720;
@@ -215,7 +225,13 @@ function selectSlots(
     if (!slot.enabled) continue;
     const occurrence = slotOccurrence(slot, config.timezone, reference);
     if (!occurrence || !matches(occurrence.offsetMinutes)) continue;
-    due.push({ id: slot.id, ...targetWeek(occurrence.dateKey, slot.weekOffset) });
+    due.push({
+      id: slot.id,
+      kind: slot.kind ?? "PERSONNEL",
+      extraRecipients: slot.extraRecipients ?? [],
+      publicToken: slot.publicToken ?? null,
+      ...targetWeek(occurrence.dateKey, slot.weekOffset),
+    });
   }
   return due;
 }

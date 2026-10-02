@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getCurrentAccount, requireAdmin, requireManager } from "@/lib/auth";
-import { encryptSecret } from "@/lib/crypto";
+import { encryptSecret, generateToken } from "@/lib/crypto";
 import { fromDateInput, getISOWeekInfo } from "@/lib/date";
 import { prisma } from "@/lib/db";
 import { sanitizeRichText } from "@/lib/html";
@@ -17,6 +17,11 @@ export type EmailActionState = { ok?: boolean; error?: string; message?: string 
 const emailAddress = emailAddressSchema;
 
 const sendTimeSchema = z.string().regex(/^\d{2}:\d{2}$/, "Heure invalide (HH:MM)");
+
+/** Jeton public non devinable pour le lien CallCenter. */
+function generatePublicToken(): string {
+  return generateToken(24);
+}
 
 const configSchema = z.object({
   smtpHost: z.string().trim().min(1, "Le serveur SMTP est requis").max(255),
@@ -34,10 +39,12 @@ const configSchema = z.object({
 
 const scheduleSchema = z.object({
   id: z.string().trim().max(64).optional(),
+  kind: z.enum(["PERSONNEL", "CALLCENTER"]).default("PERSONNEL"),
   dayOfWeek: z.coerce.number().int().min(0).max(6),
   sendTime: sendTimeSchema,
   weekOffset: z.coerce.number().int().min(0).max(1).default(1),
   enabled: z.boolean().default(true),
+  extraRecipients: z.array(emailAddress).max(500).default([]),
 });
 
 /** Decode la liste des creneaux transmise en JSON par le formulaire. */
@@ -133,18 +140,30 @@ export async function saveEmailConfiguration(
 
     const keptIds: string[] = [];
     for (const slot of schedules) {
+      const kind = slot.kind;
+      const extraRecipients = [...new Set(slot.extraRecipients.map((value) => value.trim()).filter(Boolean))];
+      const existingSlot = slot.id
+        ? await tx.emailSchedule.findUnique({
+            where: { id: slot.id },
+            select: { id: true, publicToken: true },
+          })
+        : null;
+      const publicToken =
+        kind === "CALLCENTER"
+          ? (existingSlot?.publicToken ?? generatePublicToken())
+          : null;
       const slotData = {
+        kind,
         dayOfWeek: slot.dayOfWeek,
         sendTime: slot.sendTime,
         weekOffset: slot.weekOffset,
         enabled: slot.enabled,
+        extraRecipients,
+        publicToken,
       };
-      const known = slot.id
-        ? await tx.emailSchedule.findUnique({ where: { id: slot.id }, select: { id: true } })
-        : null;
-      if (known) {
-        await tx.emailSchedule.update({ where: { id: known.id }, data: slotData });
-        keptIds.push(known.id);
+      if (existingSlot) {
+        await tx.emailSchedule.update({ where: { id: existingSlot.id }, data: slotData });
+        keptIds.push(existingSlot.id);
       } else {
         const created = await tx.emailSchedule.create({ data: slotData, select: { id: true } });
         keptIds.push(created.id);

@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { accountLinkPath, buildAccountEmail, buildAccountLinkUrl, buildWeekEmail } from "./email";
+import {
+  accountLinkPath,
+  buildAccountEmail,
+  buildAccountLinkUrl,
+  buildPublicWeekUrl,
+  buildWeekEmail,
+  buildWeekLinkEmail,
+} from "./email";
 import type { PlanningEntry, WeekSnapshot } from "./planning";
 
 function entry(overrides: Partial<PlanningEntry> & Pick<PlanningEntry, "date" | "groupId" | "userId">): PlanningEntry {
@@ -283,5 +290,33 @@ describe("buildAccountEmail", () => {
     expect(accountLinkPath("ACTIVATION")).toBe("/activer");
     expect(accountLinkPath("RESET")).toBe("/reinitialiser");
     expect(buildAccountLinkUrl("tok en", "ACTIVATION")).toContain("/activer?token=tok%20en");
+  });
+});
+
+describe("buildWeekLinkEmail", () => {
+  const links = {
+    weekYear: 2026,
+    weekNumber: 42,
+    weekStart: "2026-10-12",
+    weekEnd: "2026-10-18",
+    url: "https://exemple.fr/public/semaine/tok-abc",
+  };
+
+  it("prepare un email francais avec le lien public", () => {
+    const email = buildWeekLinkEmail(links);
+    expect(email.subject).toContain("42");
+    expect(email.text).toContain("https://exemple.fr/public/semaine/tok-abc");
+    expect(email.html).toContain('href="https://exemple.fr/public/semaine/tok-abc"');
+  });
+
+  it("prepare une version anglaise", () => {
+    const email = buildWeekLinkEmail({ ...links, locale: "en" });
+    expect(email.subject.toLowerCase()).toContain("week");
+    expect(email.html).toContain("https://exemple.fr/public/semaine/tok-abc");
+  });
+
+  it("construit l'URL publique depuis le jeton", () => {
+    const url = buildPublicWeekUrl("tok en", "https://exemple.fr");
+    expect(url).toBe("https://exemple.fr/public/semaine/tok%20en");
   });
 });

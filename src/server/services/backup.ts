@@ -67,6 +67,9 @@ export type BackupData = {
       sendTime: string;
       weekOffset: number;
       enabled: boolean;
+      kind: "PERSONNEL" | "CALLCENTER";
+      extraRecipients: string[];
+      publicToken: string | null;
     }[];
     timezone: string;
     enabled: boolean;
@@ -164,6 +167,9 @@ export async function createBackup(): Promise<BackupData> {
             sendTime: schedule.sendTime,
             weekOffset: schedule.weekOffset,
             enabled: schedule.enabled,
+            kind: schedule.kind,
+            extraRecipients: schedule.extraRecipients,
+            publicToken: schedule.publicToken,
           })),
           timezone: emailConfiguration.timezone,
           enabled: emailConfiguration.enabled,
@@ -262,6 +268,9 @@ const backupSchema = z.object({
             sendTime: z.string(),
             weekOffset: z.coerce.number().int().min(0).max(1).default(1),
             enabled: z.boolean().default(true),
+            kind: z.enum(["PERSONNEL", "CALLCENTER"]).default("PERSONNEL"),
+            extraRecipients: z.array(z.string()).default([]),
+            publicToken: z.string().nullish(),
           }),
         )
         .optional(),
@@ -521,6 +530,9 @@ export async function restoreBackup(input: unknown, mode: RestoreMode): Promise<
           sendTime: string;
           weekOffset: number;
           enabled: boolean;
+          kind?: "PERSONNEL" | "CALLCENTER";
+          extraRecipients?: string[];
+          publicToken?: string | null;
         }[] =
           config.schedules && config.schedules.length > 0
             ? config.schedules
@@ -541,6 +553,9 @@ export async function restoreBackup(input: unknown, mode: RestoreMode): Promise<
               sendTime: schedule.sendTime,
               weekOffset: schedule.weekOffset,
               enabled: schedule.enabled,
+              kind: schedule.kind ?? "PERSONNEL",
+              extraRecipients: schedule.extraRecipients ?? [],
+              publicToken: schedule.publicToken ?? null,
             },
           });
         }

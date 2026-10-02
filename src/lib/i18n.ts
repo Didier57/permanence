@@ -148,6 +148,8 @@ export const EN_MESSAGES: Record<string, string> = {
   "Deplier tout": "Expand all",
   "Remplir la semaine {week} (7 jours)": "Fill week {week} (7 days)",
   Groupe: "Group",
+  "Planning des permanences": "On-call schedule",
+  "Semaine {week} du {start} au {end}": "Week {week} from {start} to {end}",
   "Glissez une personne sur le planning pour l'affecter.":
     "Drag a person onto the schedule to assign them.",
   "Consultation seule.": "Read only.",
@@ -245,6 +247,19 @@ export const EN_MESSAGES: Record<string, string> = {
   "Aucun creneau programme.": "No slot scheduled.",
   "Ajouter un creneau": "Add a slot",
   "Supprimer le creneau": "Remove the slot",
+  "Type de planning": "Schedule type",
+  CallCenter: "Call center",
+  "Destinataires supplementaires": "Additional recipients",
+  "Recevront le lien vers le planning, sans login.": "Will receive the link to the schedule, without login.",
+  "Recevront l'email avec le planning.": "Will receive the email with the schedule.",
+  "Lien public": "Public link",
+  "Le lien sera genere a l'enregistrement.": "The link will be generated when saving.",
+  "Aucun utilisateur.": "No user.",
+  "Ce lien a expire.": "This link has expired.",
+  "Ce lien n'est pas valide.": "This link is not valid.",
+  "Contactez votre responsable pour obtenir un nouveau lien.":
+    "Contact your manager to get a new link.",
+  "Planning de la semaine": "Weekly schedule",
   "Programmez un ou plusieurs envois. Chaque creneau envoie le planning une seule fois.":
     "Schedule one or more sends. Each slot sends the schedule only once.",
   "Creneaux d'envoi invalides.": "Invalid send slots.",

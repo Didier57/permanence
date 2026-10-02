@@ -21,7 +21,18 @@ const EMPTY_CONFIG: EmailConfigView = {
   fromName: null,
   replyTo: null,
   ccRecipients: [],
-  schedules: [{ id: "", dayOfWeek: 3, sendTime: "09:00", weekOffset: 1, enabled: true }],
+  schedules: [
+    {
+      id: "",
+      dayOfWeek: 3,
+      sendTime: "09:00",
+      weekOffset: 1,
+      enabled: true,
+      kind: "PERSONNEL",
+      extraRecipients: [],
+      publicToken: null,
+    },
+  ],
   timezone: "Europe/Paris",
   enabled: false,
   hasPassword: false,
@@ -44,12 +55,27 @@ export default async function EmailsPage() {
         orderBy: [{ dayOfWeek: "asc" }, { sendTime: "asc" }],
       })
     : [];
+  const directoryUsers = isAdmin
+    ? await prisma.user.findMany({
+        where: { active: true },
+        select: { id: true, firstName: true, lastName: true, email: true },
+        orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
+      })
+    : [];
+  const directory = directoryUsers.map((user) => ({
+    id: user.id,
+    name: `${user.firstName} ${user.lastName}`,
+    email: user.email,
+  }));
   const scheduleRows = schedules.map((schedule) => ({
     id: schedule.id,
     dayOfWeek: schedule.dayOfWeek,
     sendTime: schedule.sendTime,
     weekOffset: schedule.weekOffset,
     enabled: schedule.enabled,
+    kind: schedule.kind,
+    extraRecipients: schedule.extraRecipients,
+    publicToken: schedule.publicToken,
   }));
   const config: EmailConfigView = record
     ? {
@@ -129,7 +155,7 @@ export default async function EmailsPage() {
             <h2 className="mb-4 text-base font-semibold text-slate-800">
               <T msg="Configuration SMTP" />
             </h2>
-            <EmailConfigForm config={config} accountEmail={account.email} />
+            <EmailConfigForm config={config} accountEmail={account.email} directory={directory} />
           </Card>
         ) : null}
 

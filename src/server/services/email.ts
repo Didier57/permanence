@@ -389,6 +389,227 @@ export async function sendWeekEmail(options: {
   }
 }
 
+export type WeekLinkEmail = {
+  subject: string;
+  text: string;
+  html: string;
+};
+
+const WEEK_LINK_STRINGS: Record<Locale, { subject: (week: number, start: string, end: string) => string; intro: string; introPlain: string; cta: string; expiry: string }> = {
+  fr: {
+    subject: (week, start, end) => `Planning des permanences - semaine ${week} du ${start} au ${end}`,
+    intro: "Voici le lien vers le planning des permanences de la semaine :",
+    introPlain: "Voici le lien vers le planning des permanences de la semaine :",
+    cta: "Consulter le planning de la semaine",
+    expiry: "Ce lien reste valable jusqu'au mardi suivant 9h00.",
+  },
+  en: {
+    subject: (week, start, end) => `On-call schedule - week ${week} from ${start} to ${end}`,
+    intro: "Here is the link to this week's on-call schedule:",
+    introPlain: "Here is the link to this week's on-call schedule:",
+    cta: "View this week's schedule",
+    expiry: "This link stays valid until the following Tuesday at 9:00 AM.",
+  },
+};
+
+/**
+ * Email envoye au CallCenter : contient uniquement un lien public (sans login)
+ * vers le planning de la semaine. Aucune piece jointe ni detail des permanences.
+ */
+export function buildWeekLinkEmail(
+  options: {
+    weekYear: number;
+    weekNumber: number;
+    weekStart: string;
+    weekEnd: string;
+    url: string;
+    locale?: Locale;
+  },
+): WeekLinkEmail {
+  const locale: Locale = options.locale ?? "fr";
+  const strings = WEEK_LINK_STRINGS[locale];
+  const start = formatDateFr(fromDateInput(options.weekStart));
+  const end = formatDateFr(fromDateInput(options.weekEnd));
+  const subject = strings.subject(options.weekNumber, start, end);
+  const url = options.url;
+
+  const text = `${strings.introPlain}\n${url}\n\n${strings.expiry}\n`;
+  const html = `<!DOCTYPE html><html lang="${locale}"><head><meta charset="utf-8"><title>${escapeHtml(subject)}</title></head>` +
+    `<body style="margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.4;color:#0f172a;">` +
+    `<div style="max-width:640px;padding:8px;">` +
+    `<h1 style="font-size:18px;margin:0 0 6px;">${escapeHtml(subject)}</h1>` +
+    `<p style="margin:8px 0;">${escapeHtml(strings.intro)}</p>` +
+    `<p style="margin:12px 0;"><a href="${escapeHtml(url)}" style="display:inline-block;background:#0284c7;color:#ffffff;text-decoration:none;padding:8px 14px;border-radius:6px;">${escapeHtml(strings.cta)}</a></p>` +
+    `<p style="margin:8px 0;font-size:12px;color:#475569;">${escapeHtml(url)}</p>` +
+    `<p style="margin:12px 0;font-size:12px;color:#475569;">${escapeHtml(strings.expiry)}</p>` +
+    `</div></body></html>`;
+
+  return { subject, text, html };
+}
+
+export function buildPublicWeekUrl(token: string, baseUrl?: string): string {
+  const base = (baseUrl ?? getEnv().APP_URL).replace(/\/+$/, "");
+  return `${base}/public/semaine/${encodeURIComponent(token)}`;
+}
+
+export type WeekLinkSendResult = {
+  ok: boolean;
+  error?: string;
+  recipientCount?: number;
+  weekYear?: number;
+  weekNumber?: number;
+};
+
+/**
+ * Envoi de l'email CallCenter (lien public) a une liste de destinataires.
+ * Cree une ligne EmailHistory avec type AUTOMATIC / MANUAL et kind CALLCENTER.
+ */
+export async function sendWeekLinkEmail(options: {
+  weekYear: number;
+  weekNumber: number;
+  type: SendType;
+  accountId?: string | null;
+  scheduleId?: string | null;
+  token: string;
+  recipients: string[];
+}): Promise<WeekLinkSendResult> {
+  const config = await getEmailConfig();
+  if (!config) return { ok: false, error: "Aucune configuration SMTP enregistrée." };
+
+  const settings = resolveSmtpSettings(config);
+  if (!settings.host || !settings.port || !config.fromAddress) {
+    return { ok: false, error: "Configuration SMTP incomplete." };
+  }
+
+  const recipients = [...new Set(options.recipients.map((value) => value.trim()).filter(Boolean))];
+  if (recipients.length === 0) {
+    return { ok: false, error: "Aucun destinataire identifie." };
+  }
+
+  const snapshot = await getWeekSnapshot(options.weekYear, options.weekNumber);
+  if (snapshot.entries.length === 0) {
+    return { ok: false, error: "Aucune permanence pour cette semaine." };
+  }
+
+  const users = await prisma.user.findMany({
+    where: { email: { in: recipients } },
+    select: { email: true, locale: true },
+  });
+  const localeByEmail = new Map(users.map((user) => [user.email, resolveLocale(user.locale)]));
+  const builtByLocale = new Map<Locale, WeekLinkEmail>();
+  const url = buildPublicWeekUrl(options.token);
+  function linkForLocale(locale: Locale): WeekLinkEmail {
+    const cached = builtByLocale.get(locale);
+    if (cached) return cached;
+    const built = buildWeekLinkEmail({
+      weekYear: options.weekYear,
+      weekNumber: options.weekNumber,
+      weekStart: snapshot.weekStart,
+      weekEnd: snapshot.weekEnd,
+      url,
+      locale,
+    });
+    builtByLocale.set(locale, built);
+    return built;
+  }
+
+  const from = formatFromAddress(config.fromAddress, config.fromName);
+  const cc = config.ccRecipients.filter(Boolean);
+  const weekStart = fromDateInput(snapshot.weekStart);
+  const weekEnd = fromDateInput(snapshot.weekEnd);
+  const contentHash = snapshotHash(snapshot);
+  const transport = createTransport(settings);
+
+  try {
+    for (const recipient of recipients) {
+      const email = linkForLocale(localeByEmail.get(recipient) ?? "fr");
+      await sendMail(transport, {
+        from,
+        to: recipient,
+        cc,
+        replyTo: config.replyTo ?? undefined,
+        subject: email.subject,
+        text: email.text,
+        html: email.html,
+      });
+    }
+
+    const version = await prisma.planningVersion.create({
+      data: {
+        weekYear: options.weekYear,
+        weekNumber: options.weekNumber,
+        weekStart,
+        weekEnd,
+        snapshot: snapshot as unknown as object,
+        contentHash,
+      },
+    });
+
+    await prisma.emailHistory.create({
+      data: {
+        weekYear: options.weekYear,
+        weekNumber: options.weekNumber,
+        weekStart,
+        weekEnd,
+        type: options.type,
+        kind: "CALLCENTER",
+        recipients,
+        ccRecipients: cc,
+        status: "SUCCESS",
+        partial: false,
+        contentHash,
+        planningVersionId: version.id,
+        sentByAccountId: options.accountId ?? null,
+        scheduleId: options.scheduleId ?? null,
+      },
+    });
+
+    logger.info(
+      {
+        weekYear: options.weekYear,
+        weekNumber: options.weekNumber,
+        recipients: recipients.length,
+        type: options.type,
+      },
+      "email.link.sent",
+    );
+
+    return {
+      ok: true,
+      recipientCount: recipients.length,
+      weekYear: options.weekYear,
+      weekNumber: options.weekNumber,
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    await prisma.emailHistory.create({
+      data: {
+        weekYear: options.weekYear,
+        weekNumber: options.weekNumber,
+        weekStart,
+        weekEnd,
+        type: options.type,
+        kind: "CALLCENTER",
+        recipients,
+        ccRecipients: cc,
+        status: "ERROR",
+        error: message,
+        partial: false,
+        contentHash,
+        sentByAccountId: options.accountId ?? null,
+        scheduleId: options.scheduleId ?? null,
+      },
+    });
+    logger.error(
+      { err: error, weekYear: options.weekYear, weekNumber: options.weekNumber },
+      "email.link.send.error",
+    );
+    return { ok: false, error: `Echec de l'envoi : ${message}` };
+  } finally {
+    transport.close();
+  }
+}
+
 export async function sendTestEmail(to: string): Promise<{ ok: boolean; error?: string }> {
   const config = await getEmailConfig();
   if (!config) return { ok: false, error: "Aucune configuration SMTP enregistrée." };

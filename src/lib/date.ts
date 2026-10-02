@@ -241,3 +241,13 @@ export function formatWeekRangeShort(start: Date, end: Date, locale: Locale = "f
 export function rangeConnector(locale: Locale = "fr"): string {
   return locale === "en" ? "to" : "à";
 }
+
+/**
+ * Fin de validite du lien public d'une semaine : le mardi suivant a 9h
+ * (heure locale). La permanence se termine le lundi vers 8h, mais peut
+ * deborder au mardi si le lundi est ferie.
+ */
+export function publicLinkExpiry(weekStart: Date): Date {
+  const monday = startOfISOWeek(weekStart);
+  return new Date(Date.UTC(monday.getUTCFullYear(), monday.getUTCMonth(), monday.getUTCDate() + 8, 9, 0, 0));
+}

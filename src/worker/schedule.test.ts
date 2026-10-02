@@ -122,7 +122,14 @@ describe("findDueSlots", () => {
 
   it("ne declenche que le creneau dont le jour et l'heure correspondent", () => {
     expect(findDueSlots(slots, config, new Date("2026-10-14T07:00:00Z"))).toEqual([
-      { id: "mercredi", weekYear: 2026, weekNumber: 43 },
+      {
+        id: "mercredi",
+        weekYear: 2026,
+        weekNumber: 43,
+        kind: "PERSONNEL",
+        extraRecipients: [],
+        publicToken: null,
+      },
     ]);
   });
 
@@ -132,8 +139,22 @@ describe("findDueSlots", () => {
       { id: "matin-suivante", dayOfWeek: 1, sendTime: "09:00", weekOffset: 1, enabled: true },
     ];
     expect(findDueSlots(bothSameDay, config, new Date("2026-10-19T07:00:00Z"))).toEqual([
-      { id: "matin", weekYear: 2026, weekNumber: 43 },
-      { id: "matin-suivante", weekYear: 2026, weekNumber: 44 },
+      {
+        id: "matin",
+        weekYear: 2026,
+        weekNumber: 43,
+        kind: "PERSONNEL",
+        extraRecipients: [],
+        publicToken: null,
+      },
+      {
+        id: "matin-suivante",
+        weekYear: 2026,
+        weekNumber: 44,
+        kind: "PERSONNEL",
+        extraRecipients: [],
+        publicToken: null,
+      },
     ]);
   });
 
@@ -198,7 +219,14 @@ describe("findMissedSlots", () => {
 
   it("rattrape un declenchement de la veille dans la fenetre", () => {
     expect(findMissedSlots(slots, config, new Date("2026-10-15T07:00:00Z"), 1440)).toEqual([
-      { id: "mercredi", weekYear: 2026, weekNumber: 43 },
+      {
+        id: "mercredi",
+        weekYear: 2026,
+        weekNumber: 43,
+        kind: "PERSONNEL",
+        extraRecipients: [],
+        publicToken: null,
+      },
     ]);
   });
 
