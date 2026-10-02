@@ -64,9 +64,11 @@ function newSchedule(dayOfWeek = 1): EmailScheduleView {
 export function EmailConfigForm({
   config,
   directory,
+  appUrl,
 }: {
   config: EmailConfigView;
   directory: DirectoryUser[];
+  appUrl: string;
 }) {
   const [state, formAction, pending] = useActionState(saveEmailConfiguration, INITIAL);
   const [schedules, setSchedules] = useState<EmailScheduleView[]>(config.schedules);
@@ -221,9 +223,14 @@ export function EmailConfigForm({
                   <div className="rounded-md border border-slate-200 bg-white p-2">
                     <p className="mb-1 text-xs font-medium text-slate-600">{t("Lien public")}</p>
                     {schedule.publicToken ? (
-                      <code className="block break-all text-xs text-sky-700">
-                        {`/public/semaine/${schedule.publicToken}`}
-                      </code>
+                      <a
+                        href={`${appUrl}/public/semaine/${schedule.publicToken}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block break-all text-xs text-sky-700 hover:underline"
+                      >
+                        {`${appUrl}/public/semaine/${schedule.publicToken}`}
+                      </a>
                     ) : (
                       <p className="text-xs text-slate-400">
                         {t("Le lien sera genere a l'enregistrement.")}

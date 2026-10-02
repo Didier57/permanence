@@ -6,7 +6,7 @@ import { getCurrentAccount, isManagerRole } from "@/lib/auth";
 import { dateKey, toUTCDateOnly } from "@/lib/date";
 import { prisma } from "@/lib/db";
 import { nextSlotDateKey, targetWeek } from "@/worker/schedule";
-import { getTimezone } from "@/server/services/app-config";
+import { getTimezone, getAppUrl } from "@/server/services/app-config";
 import { EmailConfigForm, type EmailConfigView } from "./email-config-form";
 import { ManualSendForm } from "./manual-send-form";
 import { SchedulerStatus, FRESH_MINUTES, type SchedulerSlotView } from "./scheduler-status";
@@ -81,6 +81,7 @@ export default async function EmailsPage() {
       };
 
   const timezone = await getTimezone();
+  const appUrl = await getAppUrl();
 
   const now = new Date();
 
@@ -138,7 +139,7 @@ export default async function EmailsPage() {
             <h2 className="mb-4 text-base font-semibold text-slate-800">
               <T msg="Creneaux et modele du message" />
             </h2>
-            <EmailConfigForm config={config} directory={directory} />
+            <EmailConfigForm config={config} directory={directory} appUrl={appUrl} />
           </Card>
         ) : null}
 
