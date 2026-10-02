@@ -622,6 +622,82 @@ export async function sendWeekLinkEmail(options: {
   }
 }
 
+export async function sendScheduleTestEmail(options: {
+  kind: "PERSONNEL" | "CALLCENTER";
+  to: string;
+  token?: string | null;
+  weekYear: number;
+  weekNumber: number;
+}): Promise<{ ok: boolean; error?: string }> {
+  const config = await getEmailConfig();
+  if (!config) return { ok: false, error: "Aucune configuration SMTP enregistrée." };
+
+  const settings = resolveSmtpSettings(config);
+  if (!settings.host || !settings.port || !config.fromAddress) {
+    return { ok: false, error: "Configuration SMTP incomplete." };
+  }
+
+  const snapshot = await getWeekSnapshot(options.weekYear, options.weekNumber);
+  if (snapshot.entries.length === 0) {
+    return { ok: false, error: "Aucune permanence pour cette semaine." };
+  }
+
+  const users = await prisma.user.findMany({
+    where: { email: options.to },
+    select: { locale: true },
+  });
+  const locale = resolveLocale(users[0]?.locale);
+
+  const from = formatFromAddress(config.fromAddress, config.fromName);
+  const transport = createTransport(settings);
+  try {
+    await verifyTransport(transport);
+    if (options.kind === "CALLCENTER") {
+      if (!options.token) {
+        return { ok: false, error: "Lien public indisponible. Enregistrez d'abord le creneau." };
+      }
+      const email = buildWeekLinkEmail({
+        weekYear: options.weekYear,
+        weekNumber: options.weekNumber,
+        weekStart: snapshot.weekStart,
+        weekEnd: snapshot.weekEnd,
+        url: buildPublicWeekUrl(options.token, await getAppUrl()),
+        locale,
+      });
+      await sendMail(transport, {
+        from,
+        to: options.to,
+        replyTo: config.replyTo ?? undefined,
+        subject: `[TEST] ${email.subject}`,
+        text: email.text,
+        html: email.html,
+      });
+    } else {
+      const email = buildWeekEmail(snapshot, {
+        introHtml: config.introHtml,
+        outroHtml: config.outroHtml,
+        locale,
+      });
+      await sendMail(transport, {
+        from,
+        to: options.to,
+        replyTo: config.replyTo ?? undefined,
+        subject: `[TEST] ${email.subject}`,
+        text: email.text,
+        html: email.html,
+      });
+    }
+    logger.info({ to: options.to, kind: options.kind }, "email.schedule.test.success");
+    return { ok: true };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    logger.error({ err: error }, "email.schedule.test.error");
+    return { ok: false, error: `Echec du test : ${message}` };
+  } finally {
+    transport.close();
+  }
+}
+
 export async function sendTestEmail(to: string): Promise<{ ok: boolean; error?: string }> {
   const config = await getEmailConfig();
   if (!config) return { ok: false, error: "Aucune configuration SMTP enregistrée." };

@@ -264,6 +264,14 @@ export const EN_MESSAGES: Record<string, string> = {
   "Destinataires supplementaires": "Additional recipients",
   "Recevront le lien vers le planning, sans login.": "Will receive the link to the schedule, without login.",
   "Recevront l'email avec le planning.": "Will receive the email with the schedule.",
+  Tester: "Test",
+  "Envoyer un test a une seule adresse": "Send a test to a single address",
+  "Adresse email du test": "Test email address",
+  "Envoyer le test": "Send test",
+  "Le test enverra uniquement le lien public a cette adresse.":
+    "The test will send only the public link to this address.",
+  "Le test enverra uniquement le planning a cette adresse.":
+    "The test will send only the schedule to this address.",
   "Lien public": "Public link",
   "Le lien sera genere a l'enregistrement.": "The link will be generated when saving.",
   "Aucun utilisateur.": "No user.",

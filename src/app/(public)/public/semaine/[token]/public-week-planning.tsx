@@ -1,9 +1,35 @@
 "use client";
 
-import { useState } from "react";
+import { useActionState, useState } from "react";
+import { GlobeIcon } from "@/components/icons";
 import { T, useTranslations, useLocale } from "@/components/locale-provider";
 import { dayNameCapitalized, formatDayMonthFr } from "@/lib/date";
+import { LOCALE_LABELS } from "@/lib/i18n";
+import { setPublicLocaleAction, type LocaleActionState } from "@/server/locale-actions";
 import type { PublicWeekView } from "@/server/services/public-week";
+
+function PublicLanguageToggle() {
+  const locale = useLocale();
+  const t = useTranslations();
+  const [state, formAction] = useActionState(setPublicLocaleAction, {} as LocaleActionState);
+  const nextLocale = locale === "fr" ? "en" : "fr";
+  return (
+    <div>
+      <form action={formAction}>
+        <input type="hidden" name="locale" value={nextLocale} />
+        <button
+          type="submit"
+          title={t("Changer de langue")}
+          className="flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100"
+        >
+          <GlobeIcon className="h-4 w-4" />
+          {LOCALE_LABELS[nextLocale]}
+        </button>
+      </form>
+      {state.error ? <span className="mt-1 block text-xs text-red-600">{t(state.error)}</span> : null}
+    </div>
+  );
+}
 
 type PublicWeekUser = PublicWeekView["directory"][string];
 
@@ -101,20 +127,23 @@ export function PublicWeekPlanning({ view }: { view: PublicWeekView }) {
   return (
     <div className="min-h-screen bg-slate-50 p-4">
       <div className="mx-auto w-full max-w-[1600px]">
-        <header className="mb-4">
-          <h1 className="text-xl font-bold text-slate-900">
-            <T msg="Planning des permanences" />
-          </h1>
-          <p className="text-sm text-slate-600">
-            <T
-              msg="Semaine {week} du {start} au {end}"
-              vars={{
-                week: view.weekNumber,
-                start: formatDayMonthFr(new Date(`${view.weekStart}T00:00:00Z`)),
-                end: formatDayMonthFr(new Date(`${view.weekEnd}T00:00:00Z`)),
-              }}
-            />
-          </p>
+        <header className="mb-4 flex items-start justify-between gap-3">
+          <div>
+            <h1 className="text-xl font-bold text-slate-900">
+              <T msg="Planning des permanences" />
+            </h1>
+            <p className="text-sm text-slate-600">
+              <T
+                msg="Semaine {week} du {start} au {end}"
+                vars={{
+                  week: view.weekNumber,
+                  start: formatDayMonthFr(new Date(`${view.weekStart}T00:00:00Z`)),
+                  end: formatDayMonthFr(new Date(`${view.weekEnd}T00:00:00Z`)),
+                }}
+              />
+            </p>
+          </div>
+          <PublicLanguageToggle />
         </header>
 
         {view.groups.length === 0 ? (

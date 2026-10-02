@@ -4,13 +4,14 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getCurrentAccount, requireAdmin, requireManager } from "@/lib/auth";
 import { encryptSecret, generateToken } from "@/lib/crypto";
-import { fromDateInput, getISOWeekInfo } from "@/lib/date";
+import { dateKey, fromDateInput, getISOWeekInfo, toUTCDateOnly } from "@/lib/date";
 import { prisma } from "@/lib/db";
 import { sanitizeRichText } from "@/lib/html";
 import { logger } from "@/lib/logger";
 import { emailAddress as emailAddressSchema, parseRecipients } from "@/lib/recipients";
-import { sendTestEmail, sendWeekEmail } from "./services/email";
+import { sendScheduleTestEmail, sendTestEmail, sendWeekEmail } from "./services/email";
 import { getWeekSnapshot } from "./services/planning";
+import { targetWeek } from "@/worker/schedule";
 
 export type EmailActionState = { ok?: boolean; error?: string; message?: string };
 
@@ -252,6 +253,47 @@ export async function testEmailConfiguration(
     return { error: result.error ?? "Echec du test." };
   }
   return { ok: true, message: `Email de test envoye a ${to}.` };
+}
+
+const scheduleTestSchema = z.object({
+  kind: z.enum(["PERSONNEL", "CALLCENTER"]),
+  to: emailAddressSchema,
+  publicToken: z.string().trim().max(128).nullish(),
+  weekOffset: z.coerce.number().int().min(0).max(1).default(1),
+});
+
+/** Envoie a une seule adresse le contenu d'un creneau (planning ou lien public). */
+export async function testScheduleEmail(input: {
+  kind: "PERSONNEL" | "CALLCENTER";
+  to: string;
+  publicToken?: string | null;
+  weekOffset: number;
+}): Promise<EmailActionState> {
+  try {
+    await requireAdmin();
+  } catch {
+    return { error: "Acces refuse." };
+  }
+
+  const parsed = scheduleTestSchema.safeParse(input);
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Donnees invalides." };
+  }
+
+  const today = dateKey(toUTCDateOnly(new Date()));
+  const { weekYear, weekNumber } = targetWeek(today, parsed.data.weekOffset);
+
+  const result = await sendScheduleTestEmail({
+    kind: parsed.data.kind,
+    to: parsed.data.to,
+    token: parsed.data.publicToken ?? null,
+    weekYear,
+    weekNumber,
+  });
+  if (!result.ok) {
+    return { error: result.error ?? "Echec du test." };
+  }
+  return { ok: true, message: `Email de test envoye a ${parsed.data.to}.` };
 }
 
 const weekSchema = z.object({

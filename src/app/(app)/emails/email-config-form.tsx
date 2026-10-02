@@ -1,11 +1,15 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useState, useTransition } from "react";
 import { RichTextEditor } from "@/components/rich-text-editor";
 import { useTranslations } from "@/components/locale-provider";
 import { PlusIcon, TrashIcon } from "@/components/icons";
 import { Alert, Button, Field, Input, Select } from "@/components/ui";
-import { saveEmailConfiguration, type EmailActionState } from "@/server/email-actions";
+import {
+  saveEmailConfiguration,
+  testScheduleEmail,
+  type EmailActionState,
+} from "@/server/email-actions";
 
 export type EmailScheduleKind = "PERSONNEL" | "CALLCENTER";
 
@@ -73,7 +77,30 @@ export function EmailConfigForm({
   const [state, formAction, pending] = useActionState(saveEmailConfiguration, INITIAL);
   const [schedules, setSchedules] = useState<EmailScheduleView[]>(config.schedules);
   const [pickerIndex, setPickerIndex] = useState<number | null>(null);
+  const [testIndex, setTestIndex] = useState<number | null>(null);
+  const [testEmail, setTestEmail] = useState("");
+  const [testMessage, setTestMessage] = useState<{ tone: "success" | "error"; text: string } | null>(null);
+  const [testPending, startTest] = useTransition();
   const t = useTranslations();
+
+  function submitTest(index: number) {
+    const schedule = schedules[index];
+    if (!schedule) return;
+    setTestMessage(null);
+    startTest(async () => {
+      const result = await testScheduleEmail({
+        kind: schedule.kind,
+        to: testEmail,
+        publicToken: schedule.publicToken,
+        weekOffset: schedule.weekOffset,
+      });
+      if (result.ok) {
+        setTestMessage({ tone: "success", text: t(result.message ?? "Email de test envoye.") });
+      } else {
+        setTestMessage({ tone: "error", text: t(result.error ?? "Echec du test.") });
+      }
+    });
+  }
 
   function updateSchedule(index: number, patch: Partial<EmailScheduleView>) {
     setSchedules((current) =>
@@ -206,12 +233,57 @@ export function EmailConfigForm({
                       ? ` (${schedule.extraRecipients.length})`
                       : ""}
                   </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => {
+                      setTestIndex(testIndex === index ? null : index);
+                      setTestMessage(null);
+                      setTestEmail("");
+                    }}
+                  >
+                    {t("Tester")}
+                  </Button>
                   <span className="text-xs text-slate-500">
                     {schedule.kind === "CALLCENTER"
                       ? t("Recevront le lien vers le planning, sans login.")
                       : t("Recevront l'email avec le planning.")}
                   </span>
                 </div>
+
+                {testIndex === index ? (
+                  <div className="rounded-md border border-slate-200 bg-white p-3">
+                    <p className="mb-2 text-xs font-medium text-slate-600">
+                      {t("Envoyer un test a une seule adresse")}
+                    </p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Input
+                        type="email"
+                        value={testEmail}
+                        onChange={(event) => setTestEmail(event.target.value)}
+                        placeholder={t("Adresse email du test")}
+                        className="max-w-xs"
+                      />
+                      <Button
+                        type="button"
+                        disabled={testPending || testEmail.trim() === ""}
+                        onClick={() => submitTest(index)}
+                      >
+                        {testPending ? t("Envoi...") : t("Envoyer le test")}
+                      </Button>
+                    </div>
+                    <p className="mt-2 text-xs text-slate-400">
+                      {schedule.kind === "CALLCENTER"
+                        ? t("Le test enverra uniquement le lien public a cette adresse.")
+                        : t("Le test enverra uniquement le planning a cette adresse.")}
+                    </p>
+                    {testMessage ? (
+                      <div className="mt-2">
+                        <Alert tone={testMessage.tone}>{testMessage.text}</Alert>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
 
                 {schedule.extraRecipients.length > 0 ? (
                   <p className="text-xs text-slate-500">
