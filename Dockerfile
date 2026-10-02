@@ -68,13 +68,17 @@ COPY --from=builder /app/docker/entrypoint.sh ./docker/entrypoint.sh
 # Dependances minimales du worker.
 COPY --from=worker-deps /app/node_modules ./worker_modules/node_modules
 
-# tsx est charge par `node --import tsx` (seed Prisma) : cette resolution ESM
-# ignore NODE_PATH, on l'expose donc directement dans node_modules.
+# tsx est charge par `node --import tsx` (seed Prisma) et le worker : cette
+# resolution ESM ignore NODE_PATH et remonte les repertoires depuis /app/src.
+# On expose donc dans ./node_modules les paquets runtime complets issus de
+# worker_modules (les copies traquees par le standalone sont partielles, ex.
+# @prisma/adapter-pg ne contient que dist/index.mjs sans dist/index.js).
 RUN set -e; \
   mkdir -p ./node_modules/.bin; \
-  for pkg in tsx esbuild; do \
+  for pkg in tsx esbuild @prisma pg pino nodemailer zod date-fns dotenv node-cron effect; do \
     if [ -e "./worker_modules/node_modules/$pkg" ]; then \
       rm -rf "./node_modules/$pkg"; \
+      mkdir -p "$(dirname "./node_modules/$pkg")"; \
       ln -s "../worker_modules/node_modules/$pkg" "./node_modules/$pkg"; \
     fi; \
   done; \
