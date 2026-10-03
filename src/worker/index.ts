@@ -4,6 +4,8 @@ import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { getEmailConfig, sendWeekEmail, sendWeekLinkEmail } from "@/server/services/email";
 import { getTimezone } from "@/server/services/app-config";
+import { generateToken } from "@/lib/crypto";
+import { getOrCreatePublicLink } from "@/server/services/public-link";
 import { checkDatabase, databaseLabel } from "./database";
 import { DEFAULT_CATCH_UP_MINUTES, findDueSlots, findMissedSlots } from "./schedule";
 
@@ -74,13 +76,13 @@ export async function runTick(
     }
 
     const send =
-      item.kind === "CALLCENTER" && item.publicToken
+      item.kind === "CALLCENTER"
         ? await sendWeekLinkEmail({
             weekYear: item.weekYear,
             weekNumber: item.weekNumber,
             type: "AUTOMATIC",
             scheduleId: item.id,
-            token: item.publicToken,
+            token: (await getOrCreatePublicLink(generateToken)).token,
             recipients: item.extraRecipients,
           })
         : await sendWeekEmail({

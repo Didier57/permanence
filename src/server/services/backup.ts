@@ -81,6 +81,11 @@ export type BackupData = {
     callCenterEmail: string | null;
     timezone: string;
   } | null;
+  publicLink: {
+    token: string;
+    previousToken: string | null;
+    previousExpiresAt: string | null;
+  } | null;
 };
 
 export async function createBackup(): Promise<BackupData> {
@@ -93,6 +98,7 @@ export async function createBackup(): Promise<BackupData> {
     emailConfiguration,
     emailSchedules,
     appConfiguration,
+    publicLink,
   ] = await Promise.all([
     prisma.user.findMany({ orderBy: [{ lastName: "asc" }, { firstName: "asc" }] }),
     prisma.account.findMany({ orderBy: { email: "asc" } }),
@@ -102,6 +108,7 @@ export async function createBackup(): Promise<BackupData> {
     prisma.emailConfiguration.findUnique({ where: { id: "default" } }),
     prisma.emailSchedule.findMany({ orderBy: [{ dayOfWeek: "asc" }, { sendTime: "asc" }] }),
     prisma.appConfiguration.findUnique({ where: { id: "default" } }),
+    prisma.publicLink.findUnique({ where: { id: "callcenter" } }),
   ]);
 
   return {
@@ -186,6 +193,15 @@ export async function createBackup(): Promise<BackupData> {
           appUrl: appConfiguration.appUrl,
           callCenterEmail: appConfiguration.callCenterEmail,
           timezone: appConfiguration.timezone,
+        }
+      : null,
+    publicLink: publicLink
+      ? {
+          token: publicLink.token,
+          previousToken: publicLink.previousToken,
+          previousExpiresAt: publicLink.previousExpiresAt
+            ? publicLink.previousExpiresAt.toISOString()
+            : null,
         }
       : null,
   };
@@ -297,6 +313,13 @@ const backupSchema = z.object({
         appUrl: z.string().nullish(),
         callCenterEmail: z.string().nullish(),
         timezone: z.string().nullish(),
+      })
+      .nullish(),
+    publicLink: z
+      .object({
+        token: z.string(),
+        previousToken: z.string().nullish(),
+        previousExpiresAt: z.string().nullish(),
       })
       .nullish(),
 });
@@ -593,6 +616,24 @@ export async function restoreBackup(input: unknown, mode: RestoreMode): Promise<
           update: { appUrl, callCenterEmail, timezone },
         });
         appConfigurationSaved = true;
+      }
+
+      if (data.publicLink?.token) {
+        const previousExpiresAt = optionalDate(data.publicLink.previousExpiresAt);
+        await tx.publicLink.upsert({
+          where: { id: "callcenter" },
+          create: {
+            id: "callcenter",
+            token: data.publicLink.token,
+            previousToken: data.publicLink.previousToken ?? null,
+            previousExpiresAt: previousExpiresAt ?? null,
+          },
+          update: {
+            token: data.publicLink.token,
+            previousToken: data.publicLink.previousToken ?? null,
+            previousExpiresAt: previousExpiresAt ?? null,
+          },
+        });
       }
 
       const accountsToRelink = await tx.account.findMany({ where: { userId: null } });

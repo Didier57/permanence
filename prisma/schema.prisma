@@ -228,6 +228,21 @@ model AppConfiguration {
   @@map("app_configuration")
 }
 
+/// Lien public unique et partage par tous les creneaux CALLCENTER.
+/// Une ligne unique (id = "callcenter") porte le jeton actif et, pendant une
+/// rotation, le jeton precedent avec sa date d'expiration (l'ancien jeton reste
+/// actif jusqu'a cette date, le temps que le prochain envoi soit parti).
+model PublicLink {
+  id                String    @id @default("callcenter")
+  token             String    @unique
+  previousToken     String?   @map("previous_token")
+  previousExpiresAt DateTime? @map("previous_expires_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  @@map("public_links")
+}
+
 model PlanningVersion {
   id          String   @id @default(cuid())
   weekYear    Int      @map("week_year")

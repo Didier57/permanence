@@ -3,10 +3,12 @@ import { PageHeader } from "@/components/page-header";
 import { T } from "@/components/locale-provider";
 import { Card } from "@/components/ui";
 import { getCurrentAccount, isManagerRole } from "@/lib/auth";
+import { generateToken } from "@/lib/crypto";
 import { dateKey, toUTCDateOnly } from "@/lib/date";
 import { prisma } from "@/lib/db";
 import { nextSlotDateKey, targetWeek } from "@/worker/schedule";
 import { getTimezone, getAppUrl } from "@/server/services/app-config";
+import { getOrCreatePublicLink } from "@/server/services/public-link";
 import { EmailConfigForm, type EmailConfigView } from "./email-config-form";
 import { ManualSendForm } from "./manual-send-form";
 import { SchedulerStatus, FRESH_MINUTES, type SchedulerSlotView } from "./scheduler-status";
@@ -83,6 +85,8 @@ export default async function EmailsPage() {
   const timezone = await getTimezone();
   const appUrl = await getAppUrl();
 
+  const publicLink = isAdmin ? await getOrCreatePublicLink(generateToken) : null;
+
   const now = new Date();
 
   const lastAutomaticBySlot = new Map<string, { sentAt: Date; status: string }>();
@@ -139,7 +143,22 @@ export default async function EmailsPage() {
             <h2 className="mb-4 text-base font-semibold text-slate-800">
               <T msg="Creneaux et modele du message" />
             </h2>
-            <EmailConfigForm config={config} directory={directory} appUrl={appUrl} />
+            <EmailConfigForm
+              config={config}
+              directory={directory}
+              appUrl={appUrl}
+              publicLink={
+                publicLink
+                  ? {
+                      token: publicLink.token,
+                      previousToken: publicLink.previousToken,
+                      previousExpiresAt: publicLink.previousExpiresAt
+                        ? publicLink.previousExpiresAt.toISOString()
+                        : null,
+                    }
+                  : null
+              }
+            />
           </Card>
         ) : null}
 

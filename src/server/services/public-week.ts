@@ -2,6 +2,7 @@ import { addDays, dateKey, fromDateInput, getISOWeekInfo, publicLinkExpiry, star
 import { prisma } from "@/lib/db";
 import { getWeekSnapshot, type PlanningEntry } from "./planning";
 import { getTimezone } from "./app-config";
+import { isPublicTokenActive } from "./public-link";
 
 export type PublicWeekGroup = {
   id: string;
@@ -31,12 +32,12 @@ export type PublicWeekView = {
 };
 
 /**
- * Resout un jeton public vers la semaine a afficher.
+ * Resout un jeton public (global, partage par tous les creneaux CALLCENTER) vers
+ * la semaine a afficher.
  *
- * Le jeton est stable par creneau. A l'ouverture, on determine la semaine visee
- * (semaine suivante ou semaine en cours selon le reglage du creneau) et on
- * verifie que le lien n'est pas expire : il reste valable jusqu'au mardi
- * suivant 9h (heure locale).
+ * Le jeton est stable pour tout le CallCenter. L'ancien jeton reste accepte
+ * jusqu'a sa date d'expiration (prochain envoi planifie). La semaine visee est
+ * deduite du premier creneau CALLCENTER actif (semaine en cours ou suivante).
  */
 export async function getPublicWeekByToken(
   token: string,
@@ -44,16 +45,38 @@ export async function getPublicWeekByToken(
   const trimmed = token.trim();
   if (!trimmed) return { ok: false, reason: "invalid" };
 
-  const slot = await prisma.emailSchedule.findUnique({
-    where: { publicToken: trimmed },
+  const now = new Date();
+  const active = await isPublicTokenActive(trimmed, now);
+  if (!active) {
+    // Distingue un ancien jeton expire d'un jeton totalement inconnu.
+    const link = await prisma.publicLink.findUnique({
+      where: { id: "callcenter" },
+      select: { previousToken: true, previousExpiresAt: true },
+    });
+    if (link?.previousToken === trimmed && link.previousExpiresAt) {
+      return { ok: false, reason: "expired" };
+    }
+    return { ok: false, reason: "invalid" };
+  }
+
+  const slot = await prisma.emailSchedule.findFirst({
+    where: { kind: "CALLCENTER", enabled: true },
+    orderBy: { createdAt: "asc" },
     select: { weekOffset: true, kind: true },
   });
-  if (!slot || slot.kind !== "CALLCENTER") return { ok: false, reason: "invalid" };
+  const slotOffsets = slot
+    ? [slot]
+    : await prisma.emailSchedule.findMany({
+        where: { kind: "CALLCENTER" },
+        orderBy: { createdAt: "asc" },
+        select: { weekOffset: true, kind: true },
+      });
+  if (slotOffsets.length === 0) return { ok: false, reason: "invalid" };
+  const weekOffset = slotOffsets[0].weekOffset;
 
   const timezone = await getTimezone();
 
   // Semaine visee aujourd'hui par ce creneau, dans son fuseau.
-  const now = new Date();
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: timezone,
     year: "numeric",
@@ -66,10 +89,10 @@ export async function getPublicWeekByToken(
     Date.UTC(Number(lookup.year), Number(lookup.month) - 1, Number(lookup.day)),
   );
 
-  const target = getISOWeekInfo(addDays(localToday, 7 * slot.weekOffset));
+  const target = getISOWeekInfo(addDays(localToday, 7 * weekOffset));
   const weekStart = startOfISOWeek(localToday);
   const start =
-    slot.weekOffset === 0
+    weekOffset === 0
       ? weekStart
       : startOfISOWeek(addDays(localToday, 7));
   const expiry = publicLinkExpiry(start);

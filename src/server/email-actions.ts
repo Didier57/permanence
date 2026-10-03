@@ -11,6 +11,7 @@ import { logger } from "@/lib/logger";
 import { emailAddress as emailAddressSchema, parseRecipients } from "@/lib/recipients";
 import { sendScheduleTestEmail, sendTestEmail, sendWeekEmail } from "./services/email";
 import { getWeekSnapshot } from "./services/planning";
+import { getOrCreatePublicLink, rotatePublicLink } from "./services/public-link";
 import { targetWeek } from "@/worker/schedule";
 
 export type EmailActionState = { ok?: boolean; error?: string; message?: string };
@@ -197,13 +198,9 @@ export async function saveEmailConfiguration(
       const existingSlot = slot.id
         ? await tx.emailSchedule.findUnique({
             where: { id: slot.id },
-            select: { id: true, publicToken: true },
+            select: { id: true },
           })
         : null;
-      const publicToken =
-        kind === "CALLCENTER"
-          ? (existingSlot?.publicToken ?? generatePublicToken())
-          : null;
       const slotData = {
         kind,
         dayOfWeek: slot.dayOfWeek,
@@ -211,7 +208,7 @@ export async function saveEmailConfiguration(
         weekOffset: slot.weekOffset,
         enabled: slot.enabled,
         extraRecipients,
-        publicToken,
+        publicToken: null,
       };
       if (existingSlot) {
         await tx.emailSchedule.update({ where: { id: existingSlot.id }, data: slotData });
@@ -225,6 +222,12 @@ export async function saveEmailConfiguration(
       keptIds.length > 0 ? { where: { id: { notIn: keptIds } } } : undefined,
     );
   });
+
+  // Le lien public est desormais global (partage par tous les creneaux
+  // CALLCENTER) : on s'assure qu'un jeton existe des qu'un creneau existe.
+  if (schedules.some((slot) => slot.kind === "CALLCENTER")) {
+    await getOrCreatePublicLink(generatePublicToken);
+  }
 
   logger.info(
     { enabled: payload.enabled, schedules: schedules.length },
@@ -283,10 +286,15 @@ export async function testScheduleEmail(input: {
   const today = dateKey(toUTCDateOnly(new Date()));
   const { weekYear, weekNumber } = targetWeek(today, parsed.data.weekOffset);
 
+  const token =
+    parsed.data.kind === "CALLCENTER"
+      ? (await getOrCreatePublicLink(generatePublicToken)).token
+      : null;
+
   const result = await sendScheduleTestEmail({
     kind: parsed.data.kind,
     to: parsed.data.to,
-    token: parsed.data.publicToken ?? null,
+    token,
     weekYear,
     weekNumber,
   });
@@ -413,6 +421,36 @@ export async function resendWeekEmail(input: {
   revalidatePath("/historique");
   revalidatePath("/planning");
   return { ok: true, recipientCount: result.recipientCount, partial: result.partial };
+}
+
+export type PublicLinkActionState = {
+  ok?: boolean;
+  error?: string;
+  token?: string;
+  previousToken?: string | null;
+  previousExpiresAt?: string | null;
+};
+
+/**
+ * Genere un nouveau jeton pour le lien public global. L'ancien jeton reste
+ * actif jusqu'au prochain envoi planifie CALLCENTER, puis expire.
+ */
+export async function regeneratePublicLink(): Promise<PublicLinkActionState> {
+  try {
+    await requireAdmin();
+  } catch {
+    return { error: "Acces refuse." };
+  }
+
+  const state = await rotatePublicLink(generatePublicToken);
+  logger.info({ token: state.token }, "email.public_link.rotated");
+  revalidatePath("/emails");
+  return {
+    ok: true,
+    token: state.token,
+    previousToken: state.previousToken,
+    previousExpiresAt: state.previousExpiresAt ? state.previousExpiresAt.toISOString() : null,
+  };
 }
 
 export async function sendWeekEmailForDate(input: {

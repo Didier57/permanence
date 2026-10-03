@@ -6,6 +6,7 @@ import { useTranslations } from "@/components/locale-provider";
 import { PlusIcon, TrashIcon } from "@/components/icons";
 import { Alert, Button, Field, Input, Select } from "@/components/ui";
 import {
+  regeneratePublicLink,
   saveEmailConfiguration,
   testScheduleEmail,
   type EmailActionState,
@@ -32,6 +33,12 @@ export type EmailConfigView = {
 };
 
 export type DirectoryUser = { id: string; name: string; email: string };
+
+export type PublicLinkView = {
+  token: string;
+  previousToken: string | null;
+  previousExpiresAt: string | null;
+};
 
 const INITIAL: EmailActionState = {};
 const DAYS = [
@@ -69,10 +76,12 @@ export function EmailConfigForm({
   config,
   directory,
   appUrl,
+  publicLink,
 }: {
   config: EmailConfigView;
   directory: DirectoryUser[];
   appUrl: string;
+  publicLink: PublicLinkView | null;
 }) {
   const [state, formAction, pending] = useActionState(saveEmailConfiguration, INITIAL);
   const [schedules, setSchedules] = useState<EmailScheduleView[]>(config.schedules);
@@ -81,7 +90,27 @@ export function EmailConfigForm({
   const [testEmail, setTestEmail] = useState("");
   const [testMessage, setTestMessage] = useState<{ tone: "success" | "error"; text: string } | null>(null);
   const [testPending, startTest] = useTransition();
+  const [link, setLink] = useState<PublicLinkView | null>(publicLink);
+  const [rotateMessage, setRotateMessage] = useState<string | null>(null);
+  const [rotatePending, startRotate] = useTransition();
   const t = useTranslations();
+
+  function regenerateLink() {
+    setRotateMessage(null);
+    startRotate(async () => {
+      const result = await regeneratePublicLink();
+      if (result.ok && result.token) {
+        setLink({
+          token: result.token,
+          previousToken: result.previousToken ?? null,
+          previousExpiresAt: result.previousExpiresAt ?? null,
+        });
+        setRotateMessage(t("Nouveau token genere. L'ancien reste actif jusqu'a l'expiration indiquee."));
+      } else {
+        setRotateMessage(t(result.error ?? "Echec de la generation du token."));
+      }
+    });
+  }
 
   function submitTest(index: number) {
     const schedule = schedules[index];
@@ -91,7 +120,6 @@ export function EmailConfigForm({
       const result = await testScheduleEmail({
         kind: schedule.kind,
         to: testEmail,
-        publicToken: schedule.publicToken,
         weekOffset: schedule.weekOffset,
       });
       if (result.ok) {
@@ -292,22 +320,61 @@ export function EmailConfigForm({
                 ) : null}
 
                 {schedule.kind === "CALLCENTER" ? (
-                  <div className="rounded-md border border-slate-200 bg-white p-2">
-                    <p className="mb-1 text-xs font-medium text-slate-600">{t("Lien public")}</p>
-                    {schedule.publicToken ? (
-                      <a
-                        href={`${appUrl}/public/semaine/${schedule.publicToken}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="block break-all text-xs text-sky-700 hover:underline"
+                  <div className="rounded-md border border-slate-200 bg-white p-3">
+                    <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-xs font-medium text-slate-600">{t("Lien public")}</p>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        disabled={rotatePending}
+                        onClick={regenerateLink}
                       >
-                        {`${appUrl}/public/semaine/${schedule.publicToken}`}
-                      </a>
+                        {rotatePending ? t("Generation...") : t("Generer un nouveau token")}
+                      </Button>
+                    </div>
+                    {link ? (
+                      <div className="flex flex-col gap-2">
+                        {link.previousToken && link.previousExpiresAt ? (
+                          <div className="rounded border border-red-200 bg-red-50 p-2">
+                            <p className="text-xs font-medium text-red-700">
+                              {t("Ancien lien (expire bientot)")}
+                              {" - "}
+                              {t("expire le {date}", {
+                                date: new Date(link.previousExpiresAt).toLocaleString(),
+                              })}
+                            </p>
+                            <a
+                              href={`${appUrl}/public/semaine/${link.previousToken}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="block break-all text-xs text-red-700 hover:underline"
+                            >
+                              {`${appUrl}/public/semaine/${link.previousToken}`}
+                            </a>
+                          </div>
+                        ) : null}
+                        <div className="rounded border border-sky-200 bg-sky-50 p-2">
+                          <p className="text-xs font-medium text-sky-700">
+                            {t("Lien actif")}
+                          </p>
+                          <a
+                            href={`${appUrl}/public/semaine/${link.token}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="block break-all text-xs text-sky-700 hover:underline"
+                          >
+                            {`${appUrl}/public/semaine/${link.token}`}
+                          </a>
+                        </div>
+                      </div>
                     ) : (
                       <p className="text-xs text-slate-400">
                         {t("Le lien sera genere a l'enregistrement.")}
                       </p>
                     )}
+                    {rotateMessage ? (
+                      <p className="mt-2 text-xs text-slate-500">{rotateMessage}</p>
+                    ) : null}
                   </div>
                 ) : null}
               </div>
