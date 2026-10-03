@@ -795,9 +795,9 @@ export function PlanningView({
                                         <div
                                           key={groupId}
                                           style={{ borderLeftColor: group?.color ?? "#0ea5e9" }}
-                                          className="flex min-w-0 items-center justify-between gap-1 rounded border border-slate-200 border-l-4 bg-white px-1.5 py-0.5 text-[11px] text-slate-700"
+                                          className="flex min-w-0 items-start justify-between gap-1 rounded border border-slate-200 border-l-4 bg-white px-1.5 py-0.5 text-[11px] text-slate-700"
                                         >
-                                          <span className="min-w-0 truncate">
+                                          <span className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-1">
                                             <span
                                               className="text-slate-400"
                                               title={group?.description ?? undefined}
@@ -807,7 +807,7 @@ export function PlanningView({
                                             <button
                                               type="button"
                                               onClick={() => setSelectedUserId(entry.userId)}
-                                              className="min-w-0 truncate text-left hover:underline"
+                                              className="min-w-0 break-words text-left hover:underline"
                                             >
                                               {entry.userName}
                                             </button>
@@ -816,7 +816,7 @@ export function PlanningView({
                                             <button
                                               type="button"
                                               onClick={() => handleRemove(key, groupId)}
-                                              className="text-slate-400 hover:text-red-600"
+                                              className="shrink-0 text-slate-400 hover:text-red-600"
                                               title={t("Retirer")}
                                             >
                                               &times;
