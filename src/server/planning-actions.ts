@@ -39,6 +39,12 @@ const fillSchema = z.object({
   userId: z.string().min(1),
 });
 
+const removeWeekSchema = z.object({
+  weekYear: z.number().int(),
+  weekNumber: z.number().int().min(1).max(53),
+  groupId: z.string().min(1),
+});
+
 async function guard(): Promise<{ id: string } | null> {
   try {
     const account = await requireManager();
@@ -135,6 +141,38 @@ export async function removePermanence(input: {
     return { ok: true, removed: true, needsResend, weekYear, weekNumber };
   } catch (error) {
     logger.error({ err: error }, "planning.remove.error");
+    return { ok: false, error: "Erreur lors de la suppression." };
+  }
+}
+
+/**
+ * Supprime toutes les permanences d'un groupe pour une semaine complete
+ * (utilise depuis la vue annee, ou une cellule represente la semaine entiere).
+ */
+export async function removeWeekPermanence(input: {
+  weekYear: number;
+  weekNumber: number;
+  groupId: string;
+}): Promise<PlanningActionResult> {
+  const account = await guard();
+  if (!account) return { ok: false, error: "Acces refuse." };
+
+  const parsed = removeWeekSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Donnees invalides." };
+
+  const { weekYear, weekNumber, groupId } = parsed.data;
+  const { start, end } = isoWeekRange(weekYear, weekNumber);
+
+  try {
+    await prisma.permanence.deleteMany({
+      where: { groupId, date: { gte: start, lte: end } },
+    });
+    const needsResend = await hasPendingResend(weekYear, weekNumber);
+    logger.info({ weekYear, weekNumber, groupId }, "planning.removeWeek");
+    revalidatePath("/planning");
+    return { ok: true, removed: true, needsResend, weekYear, weekNumber };
+  } catch (error) {
+    logger.error({ err: error }, "planning.removeWeek.error");
     return { ok: false, error: "Erreur lors de la suppression." };
   }
 }

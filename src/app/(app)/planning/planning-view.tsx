@@ -35,7 +35,7 @@ import {
   weekDays,
 } from "@/lib/date";
 import { useLocale, useTranslations } from "@/components/locale-provider";
-import { assignPermanence, fillWeek, removePermanence } from "@/server/planning-actions";
+import { assignPermanence, fillWeek, removePermanence, removeWeekPermanence } from "@/server/planning-actions";
 import { resendWeekEmail, sendWeekEmailNow } from "@/server/email-actions";
 
 export type PlanningGroup = {
@@ -348,6 +348,21 @@ export function PlanningView({
     if (!canEdit) return;
     startTransition(async () => {
       const result = await removePermanence({ date, groupId });
+      if (!result.ok) {
+        setMessage({ tone: "error", text: t(result.error ?? "Erreur.") });
+        return;
+      }
+      setMessage({ tone: "success", text: t("Permanence supprimee.") });
+      if (result.needsResend && result.weekYear && result.weekNumber) {
+        setUnsent({ weekYear: result.weekYear, weekNumber: result.weekNumber });
+      }
+    });
+  }
+
+  function handleRemoveWeek(weekYear: number, weekNumber: number, groupId: string) {
+    if (!canEdit) return;
+    startTransition(async () => {
+      const result = await removeWeekPermanence({ weekYear, weekNumber, groupId });
       if (!result.ok) {
         setMessage({ tone: "error", text: t(result.error ?? "Erreur.") });
         return;
@@ -923,11 +938,23 @@ export function PlanningView({
                                     <button
                                       type="button"
                                       onClick={() => setSelectedUserId(entry.userId)}
-                                      className="truncate text-left hover:underline"
+                                      className="min-w-0 truncate text-left hover:underline"
                                     >
                                       {entry.userName}
                                       {sameAll ? "" : ` *`}
                                     </button>
+                                    {canEdit ? (
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          handleRemoveWeek(info.weekYear, info.weekNumber, group.id)
+                                        }
+                                        className="shrink-0 text-slate-400 hover:text-red-600"
+                                        title={t("Retirer")}
+                                      >
+                                        &times;
+                                      </button>
+                                    ) : null}
                                   </div>
                                 ) : assigned ? null : (
                                   <span className="text-[11px] text-slate-300">&mdash;</span>
