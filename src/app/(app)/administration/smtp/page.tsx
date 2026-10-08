@@ -51,7 +51,7 @@ export default async function SmtpPage() {
       />
       <main className="flex flex-1 flex-col gap-6 p-6">
         <Card className="p-6">
-          <SmtpConfigForm config={config} accountEmail={account.email} />
+          <SmtpConfigForm config={config} />
         </Card>
       </main>
     </>

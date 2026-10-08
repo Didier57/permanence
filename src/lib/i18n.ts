@@ -324,6 +324,8 @@ export const EN_MESSAGES: Record<string, string> = {
   "Ex. Contact : responsable@exemple.fr": "E.g. Contact: manager@example.com",
   "Enregistrer la configuration": "Save the configuration",
   "Destinataire du test": "Test recipient",
+  "Adresse email qui recevra le message de test.": "Email address that will receive the test message.",
+  "Renseignez une adresse email de test.": "Enter a test email address.",
   "Par defaut : {email}": "Default: {email}",
   "Test en cours...": "Testing...",
   "Tester la configuration SMTP": "Test the SMTP configuration",

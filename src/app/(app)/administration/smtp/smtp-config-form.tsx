@@ -25,10 +25,8 @@ const INITIAL: EmailActionState = {};
 
 export function SmtpConfigForm({
   config,
-  accountEmail,
 }: {
   config: SmtpConfigView;
-  accountEmail: string;
 }) {
   const [state, formAction, pending] = useActionState(saveSmtpConfiguration, INITIAL);
   const [testState, testAction, testPending] = useActionState(testEmailConfiguration, INITIAL);
@@ -100,9 +98,9 @@ export function SmtpConfigForm({
           <Field
             label={t("Destinataire du test")}
             htmlFor="testRecipient"
-            hint={t("Par defaut : {email}", { email: accountEmail })}
+            hint={t("Adresse email qui recevra le message de test.")}
           >
-            <Input id="testRecipient" name="testRecipient" type="email" placeholder={accountEmail} />
+            <Input id="testRecipient" name="testRecipient" type="email" required />
           </Field>
           <Button type="submit" variant="secondary" disabled={testPending}>
             {testPending ? t("Test en cours...") : t("Tester la configuration SMTP")}

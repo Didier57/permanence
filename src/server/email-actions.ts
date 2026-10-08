@@ -241,15 +241,18 @@ export async function testEmailConfiguration(
   _prev: EmailActionState,
   formData: FormData,
 ): Promise<EmailActionState> {
-  let account;
   try {
-    account = await requireAdmin();
+    await requireAdmin();
   } catch {
     return { error: "Acces refuse." };
   }
 
-  const toRaw = formData.get("testRecipient")?.toString().trim();
-  const to = toRaw && emailAddress.safeParse(toRaw).success ? toRaw : account.email;
+  const toRaw = formData.get("testRecipient")?.toString().trim() ?? "";
+  const parsedTo = emailAddress.safeParse(toRaw);
+  if (!parsedTo.success) {
+    return { error: "Renseignez une adresse email de test." };
+  }
+  const to = parsedTo.data;
 
   const result = await sendTestEmail(to);
   if (!result.ok) {
